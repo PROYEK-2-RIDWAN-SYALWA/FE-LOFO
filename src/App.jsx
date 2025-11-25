@@ -1,32 +1,28 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-// Import Halaman
+import PrivateRoute from './components/PrivateRoute';
+
+// --- IMPORT SEMUA HALAMAN (Pastikan tidak ada yang terlewat) ---
+import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
 import LaporBarang from './pages/LaporBarang';
-import Dashboard from './pages/Dashboard'; // <--- PENTING: Import dari file pages
-
-// Komponen Proteksi Route
-const PrivateRoute = ({ children }) => {
-  const { user } = useAuth();
-  return user ? children : <Navigate to="/login" />;
-};
-
-// --- BAGIAN INI SUDAH DIHAPUS (JANGAN ADA LAGI) ---
-// const Dashboard = () => { ... } 
-// --------------------------------------------------
+import Profile from './pages/Profile'; // <--- INI YANG TADI HILANG
 
 function App() {
   return (
     <AuthProvider>
       <Routes>
+        {/* === RUTE PUBLIK (Bisa diakses siapa saja) === */}
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         
-        {/* Rute Terproteksi */}
-        <Route path="/" element={
+        {/* === RUTE TERPROTEKSI (Wajib Login) === */}
+        <Route path="/dashboard" element={
           <PrivateRoute>
-            <Dashboard /> {/* Sekarang ini memanggil file dari pages/Dashboard.jsx */}
+            <Dashboard />
           </PrivateRoute>
         } />
         
@@ -35,10 +31,16 @@ function App() {
             <LaporBarang />
           </PrivateRoute>
         } />
+        
+        <Route path="/profile" element={
+          <PrivateRoute>
+            <Profile />
+          </PrivateRoute>
+        } />
 
-        {/* Redirect */}
-        <Route path="/dashboard" element={<Navigate to="/" replace />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        {/* === REDIRECT (Penyelamat Link Rusak) === */}
+        {/* Jika user ketik alamat ngawur, lempar ke Landing Page */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AuthProvider>
   );
