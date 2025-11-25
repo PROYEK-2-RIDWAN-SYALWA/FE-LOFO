@@ -1,30 +1,20 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+// Import Halaman
 import Login from './pages/Login';
 import Register from './pages/Register';
+import LaporBarang from './pages/LaporBarang';
+import Dashboard from './pages/Dashboard'; // <--- PENTING: Import dari file pages
 
-// Komponen Proteksi Route (Hanya user login yang boleh lewat)
+// Komponen Proteksi Route
 const PrivateRoute = ({ children }) => {
   const { user } = useAuth();
   return user ? children : <Navigate to="/login" />;
 };
 
-// Halaman Dashboard Sementara
-const Dashboard = () => {
-  const { user, signOut } = useAuth();
-  return (
-    <div className="min-h-screen bg-gray-900 text-white p-10">
-      <h1 className="text-3xl font-bold mb-4">Dashboard Lost & Found</h1>
-      <p className="mb-4">Halo, <span className="text-yellow-400">{user.email}</span></p>
-      <button 
-        onClick={signOut} 
-        className="bg-red-600 px-4 py-2 rounded hover:bg-red-700"
-      >
-        Logout
-      </button>
-    </div>
-  );
-};
+// --- BAGIAN INI SUDAH DIHAPUS (JANGAN ADA LAGI) ---
+// const Dashboard = () => { ... } 
+// --------------------------------------------------
 
 function App() {
   return (
@@ -33,15 +23,22 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         
-        {/* Route Terproteksi */}
-        <Route 
-          path="/" 
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          } 
-        />
+        {/* Rute Terproteksi */}
+        <Route path="/" element={
+          <PrivateRoute>
+            <Dashboard /> {/* Sekarang ini memanggil file dari pages/Dashboard.jsx */}
+          </PrivateRoute>
+        } />
+        
+        <Route path="/lapor" element={
+          <PrivateRoute>
+            <LaporBarang />
+          </PrivateRoute>
+        } />
+
+        {/* Redirect */}
+        <Route path="/dashboard" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </AuthProvider>
   );
