@@ -3,25 +3,22 @@ import { supabase } from "../services/supabaseClient";
 
 const AuthContext = createContext();
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Cek sesi saat aplikasi pertama kali dimuat
+    // Cek sesi saat refresh halaman
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       setLoading(false);
     };
-
     getSession();
 
-    // 2. Pasang "telinga" untuk mendengar perubahan auth (Login/Logout otomatis update)
+    // Dengarkan perubahan login/logout realtime
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setLoading(false);
@@ -30,25 +27,17 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fungsi Register
-  const signUp = async (email, password) => {
-    return await supabase.auth.signUp({ email, password });
-  };
-
-  // Fungsi Login
-  const signIn = async (email, password) => {
-    return await supabase.auth.signInWithPassword({ email, password });
-  };
-
-  // Fungsi Logout
-  const signOut = async () => {
-    return await supabase.auth.signOut();
-  };
-
+  // --- PERBAIKAN DI SINI ---
   const value = {
-    signUp,
-    signIn,
-    signOut,
+    // SignUp: Menerima object { email, password, ... }
+    signUp: (data) => supabase.auth.signUp(data),
+    
+    // SignIn: KITA UBAH AGAR MENERIMA OBJECT SECARA LANGSUNG
+    signIn: (data) => supabase.auth.signInWithPassword(data),
+    
+    // SignOut
+    signOut: () => supabase.auth.signOut(),
+    
     user,
   };
 
