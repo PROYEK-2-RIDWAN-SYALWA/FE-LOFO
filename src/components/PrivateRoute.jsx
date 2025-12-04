@@ -1,16 +1,17 @@
-// src/components/PrivateRoute.jsx
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const PrivateRoute = ({ children }) => {
   const { user } = useAuth();
   
-  // Logika: Jika user belum login (null), tendang ke halaman login
+  // LOGIKA BARU:
+  // Jika user tidak ada (belum login atau baru saja LOGOUT),
+  // Kembalikan ke Halaman Depan (Landing Page), bukan ke Login.
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
-  // Jika sudah login, izinkan masuk ke halaman tujuan
+  // Jika ada user, izinkan masuk
   return children;
 };
 
