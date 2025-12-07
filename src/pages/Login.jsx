@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../services/supabaseClient'; // Import Supabase Langsung
+// HAPUS import supabase karena tidak dipakai langsung lagi
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 
@@ -19,28 +19,8 @@ const Login = () => {
     setLoading(true);
 
     try {
-      let emailToLogin = identifier;
-
-      // CEK: Apakah yang diketik itu Email atau Username?
-      // Jika TIDAK mengandung '@', kita anggap itu Username
-      if (!identifier.includes('@')) {
-        // Cari email aslinya di database berdasarkan username
-        const { data, error } = await supabase
-          .from('akun_pengguna')
-          .select('email')
-          .eq('username', identifier) // Cari username
-          .single();
-
-        if (error || !data) {
-          throw new Error('Username tidak ditemukan.');
-        }
-        
-        // Ketemu! Pakai email ini untuk login
-        emailToLogin = data.email;
-      }
-
-      // Login ke Supabase (Supabase hanya terima email)
-      const { error } = await signIn({ email: emailToLogin, password });
+      // Panggil signIn dari AuthContext (yang sudah dimodifikasi ke Backend)
+      const { error } = await signIn({ identifier, password });
       
       if (error) throw error;
       
@@ -49,10 +29,7 @@ const Login = () => {
 
     } catch (err) {
       console.error(err);
-      // Pesan error yang ramah user
-      setError(err.message === 'Username tidak ditemukan.' 
-        ? 'Username tidak terdaftar.' 
-        : 'Login Gagal: Periksa username/email dan password Anda.');
+      setError(err.message || 'Login Gagal: Periksa username/email dan password Anda.');
     } finally {
       setLoading(false);
     }

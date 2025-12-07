@@ -1,6 +1,27 @@
 // Mengambil URL Backend dari environment variable
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+// --- FUNGSI AUTH ---
+
+// [BARU] Login via Backend
+export const loginUser = async (credentials) => {
+  // credentials = { identifier, password }
+  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  });
+
+  const data = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(data.error || 'Login Gagal');
+  }
+  
+  return data; // Return object { message, session, user }
+};
+
+// ... (Biarkan fungsi fetchUserProfile, updateUserProfile, registerUser, dll tetap ada di bawah sini) ...
 // --- FUNGSI USER ---
 
 export const fetchUserProfile = async (userId) => {
@@ -33,8 +54,8 @@ export const registerUser = async (userData) => {
     body: JSON.stringify(userData),
   });
   if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.error || 'Registrasi Gagal');
+    constHZ = await response.json();
+    throw new Error(constHZ.error || 'Registrasi Gagal');
   }
   return response.json();
 };

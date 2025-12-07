@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../services/supabaseClient";
+import { loginUser } from "../services/api"; // <--- Import fungsi baru
 
 const AuthContext = createContext();
 
@@ -27,13 +28,29 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // --- PERBAIKAN DI SINI ---
   const value = {
-    // SignUp: Menerima object { email, password, ... }
+    // SignUp tetap direct (atau mau dipindah ke backend juga boleh, tapi Register sudah via API di registerUser page)
     signUp: (data) => supabase.auth.signUp(data),
     
-    // SignIn: KITA UBAH AGAR MENERIMA OBJECT SECARA LANGSUNG
-    signIn: (data) => supabase.auth.signInWithPassword(data),
+    // [MODIFIKASI] SignIn sekarang lewat Backend Express
+    signIn: async ({ identifier, password }) => {
+      try {
+        // 1. Minta Backend login & cari username
+        const data = await loginUser({ identifier, password });
+        
+        // 2. Set Session di Frontend supaya Supabase Client 'tahu' kita sudah login
+        const { error } = await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+
+        if (error) throw error;
+
+        return { data, error: null };
+      } catch (err) {
+        return { data: null, error: err };
+      }
+    },
     
     // SignOut
     signOut: () => supabase.auth.signOut(),
