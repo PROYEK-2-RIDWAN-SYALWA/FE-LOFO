@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { registerUser } from '../services/api';
-// Pastikan import IdCard (bukan BadgeId)
-import { User, Shield, GraduationCap, BookOpen, Lock, Mail, Phone, IdCard } from 'lucide-react';
+import { registerUser, fetchProdiList } from '../services/api';
+import { User, Lock, Mail, Phone, IdCard } from 'lucide-react';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -10,14 +9,39 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Tambahkan 'username' di state
+  // State Data Prodi
+  const [daftarProdi, setDaftarProdi] = useState([]);
+  const [loadingProdi, setLoadingProdi] = useState(false);
+
   const [formData, setFormData] = useState({
-    email: '', password: '', nama_lengkap: '', no_wa: '', username: '',
+    email: '', 
+    password: '', 
+    nama_lengkap: '', 
+    no_wa: '', 
+    username: '',
     // Data Spesifik
-    npm: '', prodi: '', angkatan: '', // Mhs
-    nidn: '', // Dosen (Fakultas dihapus, diganti prodi input yang sama)
-    nomor_induk: '', lokasi_jaga: 'Gerbang Depan' // Satpam
+    npm: '', 
+    prodi: '', 
+    angkatan: '', 
+    nidn: '', 
+    nomor_induk: '', 
+    lokasi_jaga: 'Gerbang Depan'
   });
+
+  useEffect(() => {
+    const loadProdi = async () => {
+      setLoadingProdi(true);
+      try {
+        const data = await fetchProdiList();
+        setDaftarProdi(data);
+      } catch (err) {
+        console.error("Gagal memuat daftar prodi:", err);
+      } finally {
+        setLoadingProdi(false);
+      }
+    };
+    loadProdi();
+  }, []);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -26,12 +50,10 @@ const Register = () => {
     setError('');
     setLoading(true);
 
-    // Siapkan Data Spesifik
     let specific_data = {};
     if (role === 'mahasiswa') {
       specific_data = { npm: formData.npm, prodi: formData.prodi, angkatan: formData.angkatan };
     } else if (role === 'dosen') {
-      // Dosen sekarang pakai PRODI juga
       specific_data = { nidn: formData.nidn, prodi: formData.prodi }; 
     } else if (role === 'satpam') {
       specific_data = { nomor_induk: formData.nomor_induk, lokasi_jaga: formData.lokasi_jaga };
@@ -43,7 +65,7 @@ const Register = () => {
         password: formData.password,
         nama_lengkap: formData.nama_lengkap,
         no_wa: formData.no_wa,
-        username: formData.username, // <--- Kirim Username
+        username: formData.username,
         role,
         specific_data
       });
@@ -94,35 +116,26 @@ const Register = () => {
           <form className="space-y-4" onSubmit={handleSubmit}>
             {/* Field Umum */}
             <div className="grid grid-cols-1 gap-4">
-              {/* Nama Lengkap */}
               <div className="relative">
                 <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                 <input name="nama_lengkap" type="text" required placeholder="Nama Lengkap" onChange={handleChange}
                   className="pl-10 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
               </div>
-              
-              {/* Email (Biasa) */}
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                 <input name="email" type="email" required placeholder="Email Aktif" onChange={handleChange}
                   className="pl-10 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
               </div>
-
-              {/* INPUT BARU: USERNAME */}
               <div className="relative">
                 <IdCard className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                 <input name="username" type="text" required placeholder="Username (tanpa spasi)" onChange={handleChange}
                   className="pl-10 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
               </div>
-
-              {/* No WA */}
               <div className="relative">
                 <Phone className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                 <input name="no_wa" type="text" required placeholder="No WhatsApp (628...)" onChange={handleChange}
                   className="pl-10 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
               </div>
-
-              {/* Password */}
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                 <input name="password" type="password" required placeholder="Password" onChange={handleChange}
@@ -137,7 +150,33 @@ const Register = () => {
               {role === 'mahasiswa' && (
                 <>
                   <input name="npm" type="text" required placeholder="NPM" onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg" />
-                  <input name="prodi" type="text" required placeholder="Program Studi" onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg" />
+                  
+                  {/* DROPDOWN PRODI - Langsung di sini agar state terjaga */}
+                  <div className="relative">
+                    <select 
+                      name="prodi" 
+                      required 
+                      onChange={handleChange} 
+                      value={formData.prodi} // <--- PENTING: Controlled Component
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none appearance-none bg-white text-gray-700"
+                      disabled={loadingProdi}
+                    >
+                      <option value="" disabled>
+                        {loadingProdi ? "Memuat Data Prodi..." : "Pilih Program Studi"}
+                      </option>
+                      {daftarProdi.map((item) => (
+                        <option key={item.id_prodi} value={item.nama_prodi}>
+                          {item.nama_prodi}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+
                   <input name="angkatan" type="number" required placeholder="Tahun Angkatan" onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg" />
                 </>
               )}
@@ -145,8 +184,32 @@ const Register = () => {
               {role === 'dosen' && (
                 <>
                   <input name="nidn" type="text" required placeholder="NIDN" onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg" />
-                  {/* Dosen sekarang isi Prodi */}
-                  <input name="prodi" type="text" required placeholder="Program Studi (Contoh: D4 Logistik)" onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg" />
+                  
+                  {/* DROPDOWN PRODI DOSEN */}
+                  <div className="relative">
+                    <select 
+                      name="prodi" 
+                      required 
+                      onChange={handleChange} 
+                      value={formData.prodi} 
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none appearance-none bg-white text-gray-700"
+                      disabled={loadingProdi}
+                    >
+                      <option value="" disabled>
+                        {loadingProdi ? "Memuat Data Prodi..." : "Pilih Program Studi"}
+                      </option>
+                      {daftarProdi.map((item) => (
+                        <option key={item.id_prodi} value={item.nama_prodi}>
+                          {item.nama_prodi}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
                 </>
               )}
 

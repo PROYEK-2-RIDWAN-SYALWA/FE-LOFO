@@ -88,3 +88,10 @@ export const fetchMyPosts = async (authId) => {
   if (!response.ok) throw new Error('Gagal mengambil history laporan');
   return response.json();
 };
+
+// --- FUNGSI MASTER DATA ---
+export const fetchProdiList = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/master/prodi`);
+  if (!response.ok) throw new Error('Gagal memuat daftar prodi');
+  return response.json();
+};
