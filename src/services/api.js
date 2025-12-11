@@ -26,19 +26,22 @@ export const loginUser = async (credentials) => {
 
 export const fetchUserProfile = async (userId) => {
   if (!userId) throw new Error("User ID tidak ditemukan");
-  const response = await fetch(`${API_BASE_URL}/api/users/profile?userId=${userId}`);
+  // Perhatikan: endpoint ini harus cocok dengan route di index.js
+  const response = await fetch(`${API_BASE_URL}/api/users/profile?authId=${userId}`);
+  
   if (!response.ok) {
-    if (response.status === 404) return { data: null };
+    if (response.status === 404) return null;
     throw new Error('Gagal mengambil data profil');
   }
   return response.json();
 };
 
-export const updateUserProfile = async (userId, userData) => {
+export const updateUserProfile = async (userId, payload) => {
+  // payload isinya { authId, commonData, specificData } dari Profile.jsx
   const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, ...userData }),
+    body: JSON.stringify(payload),
   });
   if (!response.ok) {
     const errorData = await response.json();

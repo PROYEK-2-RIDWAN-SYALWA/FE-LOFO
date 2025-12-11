@@ -165,7 +165,7 @@ const Register = () => {
                         {loadingProdi ? "Memuat Data Prodi..." : "Pilih Program Studi"}
                       </option>
                       {daftarProdi.map((item) => (
-                        <option key={item.id_prodi} value={item.nama_prodi}>
+                        <option key={item.id_prodi} value={item.id_prodi}>
                           {item.nama_prodi}
                         </option>
                       ))}
@@ -199,7 +199,7 @@ const Register = () => {
                         {loadingProdi ? "Memuat Data Prodi..." : "Pilih Program Studi"}
                       </option>
                       {daftarProdi.map((item) => (
-                        <option key={item.id_prodi} value={item.nama_prodi}>
+                        <option key={item.id_prodi} value={item.id_prodi}>
                           {item.nama_prodi}
                         </option>
                       ))}
