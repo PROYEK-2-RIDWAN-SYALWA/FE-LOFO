@@ -98,3 +98,10 @@ export const fetchProdiList = async () => {
   if (!response.ok) throw new Error('Gagal memuat daftar prodi');
   return response.json();
 };
+
+// Fetch Kategori List
+export const fetchKategoriList = async () => {
+  const response = await fetch(`${API_BASE_URL}/api/master/kategori`);
+  if (!response.ok) throw new Error('Gagal memuat kategori');
+  return response.json();
+};
