@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 
 const Dashboard = () => {
-  // PERBAIKAN DI SINI: Ubah 'logout' kembali menjadi 'signOut'
   const { user, signOut } = useAuth(); 
   const navigate = useNavigate();
   
@@ -18,20 +17,21 @@ const Dashboard = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(''); // State untuk search
 
   useEffect(() => {
     const initData = async () => {
       if (user) {
         setLoading(true);
         try {
-          // 1. Ambil Profil
           const userRes = await fetchUserProfile(user.id);
           setProfile(userRes); 
           
-          // 2. Ambil Postingan
           let postsData = [];
           if (activeTab === 'jelajah') {
-            postsData = await fetchPosts();
+            const allPosts = await fetchPosts();
+            // Filter: Hanya tampilkan yang aktif
+            postsData = allPosts.filter(p => p.status_postingan === 'aktif');
           } else {
             postsData = await fetchMyPosts();
           }
@@ -48,7 +48,6 @@ const Dashboard = () => {
   }, [user, activeTab]);
 
   const handleLogout = async () => {
-    // PERBAIKAN DI SINI: Panggil 'signOut()'
     await signOut(); 
     navigate('/login');
   };
@@ -64,7 +63,6 @@ const Dashboard = () => {
     });
   };
 
-  // Helper Label & Icon
   const getRoleLabel = (role) => {
     const r = role ? role.toLowerCase() : 'mahasiswa';
     if (r === 'dosen') return 'Bapak/Ibu Dosen';
@@ -80,7 +78,12 @@ const Dashboard = () => {
     return <School size={24} />;
   };
 
-  // Komponen Sidebar Button (Desktop)
+  // Filter Search Logic
+  const filteredPosts = posts.filter(post => 
+    post.nama_barang.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    post.deskripsi.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const NavButton = ({ icon, label, isActive, onClick }) => (
     <button 
       onClick={onClick}
@@ -98,7 +101,6 @@ const Dashboard = () => {
     </button>
   );
 
-  // Komponen Mobile Nav Button
   const MobileNavButton = ({ icon, label, isActive, onClick }) => (
     <button 
       onClick={onClick}
@@ -115,7 +117,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans overflow-hidden">
       
-      {/* === 1. SIDEBAR (DESKTOP) === */}
+      {/* SIDEBAR */}
       <aside 
         onMouseEnter={() => setIsSidebarHovered(true)}
         onMouseLeave={() => setIsSidebarHovered(false)}
@@ -124,7 +126,6 @@ const Dashboard = () => {
           ${isSidebarHovered ? 'w-72 px-4' : 'w-24 px-3'}`}
       >
         <div>
-          {/* Logo Section */}
           <div className={`flex items-center mb-12 mt-2 transition-all duration-300 ${isSidebarHovered ? 'justify-start pl-2 gap-4' : 'justify-center'}`}>
             <div className="bg-white p-2 rounded-xl flex-shrink-0 shadow-lg shadow-blue-900/50">
               <img src="/src/assets/ulbi-logo.png" alt="ULBI" className="h-6 w-auto" />
@@ -136,24 +137,16 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Navigation Menu */}
           <div className="space-y-2">
             <NavButton icon={<Search size={22} />} label="Jelajah Barang" isActive={activeTab === 'jelajah'} onClick={() => setActiveTab('jelajah')} />
             <NavButton icon={<List size={22} />} label="Riwayat Saya" isActive={activeTab === 'saya'} onClick={() => setActiveTab('saya')} />
             <NavButton icon={<User size={22} />} label="Profil Akun" onClick={() => navigate('/profile')} isActive={false} />
-            
             <div className="my-6 border-t border-white/10 mx-2"></div>
-            
             <NavButton icon={<MessageSquare size={22} />} label="Bantuan Admin" onClick={() => window.open('mailto:admin@ulbi.ac.id')} isActive={false} />
           </div>
         </div>
 
-        {/* Logout Section */}
-        <button 
-          onClick={handleLogout} 
-          className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-all group
-          ${isSidebarHovered ? '' : 'justify-center'}`}
-        >
+        <button onClick={handleLogout} className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-all group ${isSidebarHovered ? '' : 'justify-center'}`}>
           <LogOut size={22} className="group-hover:-translate-x-1 transition-transform"/>
           <span className={`whitespace-nowrap font-medium text-sm transition-all duration-300 ${isSidebarHovered ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'}`}>
             Keluar Aplikasi
@@ -161,15 +154,12 @@ const Dashboard = () => {
         </button>
       </aside>
 
-      {/* === 2. BOTTOM NAVIGATION (MOBILE) === */}
+      {/* MOBILE NAV */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-200 h-20 pb-2 flex items-center justify-around z-50 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)]">
         <MobileNavButton icon={<Search size={24}/>} label="Jelajah" isActive={activeTab === 'jelajah'} onClick={() => setActiveTab('jelajah')} />
         <MobileNavButton icon={<List size={24}/>} label="Riwayat" isActive={activeTab === 'saya'} onClick={() => setActiveTab('saya')} />
         <div className="relative -top-6">
-          <button 
-             onClick={() => navigate('/lapor')}
-             className="bg-[#0a1e3f] text-white p-4 rounded-full shadow-lg shadow-blue-900/40 hover:scale-105 transition-transform active:scale-95"
-          >
+          <button onClick={() => navigate('/lapor')} className="bg-[#0a1e3f] text-white p-4 rounded-full shadow-lg shadow-blue-900/40 hover:scale-105 transition-transform active:scale-95">
             <PlusCircle size={28} />
           </button>
         </div>
@@ -180,15 +170,11 @@ const Dashboard = () => {
         </button>
       </div>
 
-      {/* === 3. MAIN CONTENT === */}
-      <main className={`flex-1 bg-slate-50 min-h-screen transition-all duration-300 
-        md:pl-28 ${isSidebarHovered ? 'md:ml-64' : 'md:ml-0'} 
-        pt-6 px-4 md:px-10 pb-28 md:pb-12 h-screen overflow-y-auto`}
-      >
+      {/* MAIN CONTENT */}
+      <main className={`flex-1 bg-slate-50 min-h-screen transition-all duration-300 md:pl-28 ${isSidebarHovered ? 'md:ml-64' : 'md:ml-0'} pt-6 px-4 md:px-10 pb-28 md:pb-12 h-screen overflow-y-auto`}>
         
         {/* Header User Card */}
         <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
-          {/* Background Decor */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-orange-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50 pointer-events-none"></div>
           
           <div className="flex items-center gap-5 relative z-10">
@@ -210,37 +196,47 @@ const Dashboard = () => {
           </div>
 
           <div className="flex w-full md:w-auto gap-3 relative z-10">
-            <button 
-              onClick={() => navigate('/lapor', { state: { tipe: 'kehilangan' } })}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#0a1e3f] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg hover:bg-blue-900 hover:shadow-blue-900/30 transition-all active:scale-95"
-            >
+            <button onClick={() => navigate('/lapor', { state: { tipe: 'kehilangan' } })} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#0a1e3f] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg hover:bg-blue-900 transition-all active:scale-95">
               <PlusCircle size={18} /> Lapor Hilang
             </button>
-            <button 
-              onClick={() => navigate('/lapor', { state: { tipe: 'ditemukan' } })}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white text-[#0a1e3f] border-2 border-slate-100 px-6 py-3 rounded-xl text-sm font-bold hover:border-slate-200 hover:bg-slate-50 transition-all active:scale-95"
-            >
+            <button onClick={() => navigate('/lapor', { state: { tipe: 'ditemukan' } })} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white text-[#0a1e3f] border-2 border-slate-100 px-6 py-3 rounded-xl text-sm font-bold hover:border-slate-200 hover:bg-slate-50 transition-all active:scale-95">
               <PlusCircle size={18} /> Lapor Temuan
             </button>
           </div>
         </div>
 
-        {/* Tab & Judul */}
-        <div className="flex items-center gap-4 mb-8">
-           <div className={`p-2 rounded-lg ${activeTab === 'jelajah' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-              {activeTab === 'jelajah' ? <Search size={20}/> : <List size={20}/>}
+        {/* --- UPDATE: BAGIAN TAB & SEARCH BAR --- */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+           
+           {/* Bagian Kiri: Icon Tab & Judul */}
+           <div className="flex items-center gap-4">
+              <div className={`p-2 rounded-lg ${activeTab === 'jelajah' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                 {activeTab === 'jelajah' ? <Search size={20}/> : <List size={20}/>}
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">
+                  {activeTab === 'jelajah' ? 'Jelajah Barang Terkini' : 'Riwayat Laporan Saya'}
+                </h3>
+                <p className="text-slate-400 text-xs">
+                   {activeTab === 'jelajah' ? 'Daftar semua laporan kehilangan & temuan' : 'Memantau status laporan yang Anda buat'}
+                </p>
+              </div>
            </div>
-           <div>
-             <h3 className="text-xl font-bold text-slate-800">
-               {activeTab === 'jelajah' ? 'Jelajah Barang Terkini' : 'Riwayat Laporan Saya'}
-             </h3>
-             <p className="text-slate-400 text-xs">
-                {activeTab === 'jelajah' ? 'Daftar semua laporan kehilangan & temuan' : 'Memantau status laporan yang Anda buat'}
-             </p>
+
+           {/* Bagian Kanan: Search Input */}
+           <div className="relative w-full md:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Cari barang..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all text-sm font-medium"
+              />
            </div>
         </div>
 
-        {/* Content Grid */}
+        {/* Content Grid (Menggunakan filteredPosts) */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[1, 2, 3, 4].map((i) => (
@@ -253,19 +249,19 @@ const Dashboard = () => {
               </div>
             ))}
           </div>
-        ) : posts.length === 0 ? (
+        ) : filteredPosts.length === 0 ? (
           <div className="bg-white border-2 border-dashed border-slate-200 rounded-[2rem] p-16 text-center flex flex-col items-center justify-center">
             <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mb-6 text-slate-300">
               <Search size={32} />
             </div>
-            <h4 className="text-lg font-bold text-slate-700 mb-1">Belum ada data laporan</h4>
+            <h4 className="text-lg font-bold text-slate-700 mb-1">Tidak ada data ditemukan</h4>
             <p className="text-slate-400 text-sm max-w-xs mx-auto">
-              Saat ini belum ada data yang tersedia untuk kategori ini. Cobalah untuk membuat laporan baru.
+              Coba kata kunci lain atau pastikan ejaan barang yang Anda cari benar.
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20">
-            {posts.map((item) => (
+            {filteredPosts.map((item) => (
               <div 
                 key={item.id_postingan} 
                 className="group bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1"
