@@ -4,7 +4,7 @@ import { loginUser } from "../services/api"; // <--- Import fungsi baru
 
 const AuthContext = createContext();
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => useContext(AuthContext); //merah doang g ngaruh
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

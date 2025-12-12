@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Shield, Gift, ArrowRight, CheckCircle, Clock, MapPin, LayoutGrid, ChevronRight } from 'lucide-react';
 import ulbiLogo from '../assets/ulbi-logo.png'; 
-import { fetchAllPosts } from '../services/api';
+import { fetchPosts } from '../services/api';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ const LandingPage = () => {
   useEffect(() => {
     const loadPosts = async () => {
       try {
-        const data = await fetchAllPosts();
+        const data = await fetchPosts();
         setItems(data.slice(0, 3)); 
       } catch (error) {
         console.error("Gagal load barang:", error);

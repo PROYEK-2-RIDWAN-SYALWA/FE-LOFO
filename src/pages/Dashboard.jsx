@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserProfile, fetchAllPosts, fetchMyPosts } from '../services/api';
+import { fetchUserProfile, fetchPosts, fetchMyPosts } from '../services/api';
 import { 
   LogOut, User, PlusCircle, Search, 
   List, MessageSquare, Clock, MapPin, 
-  ChevronRight, Shield, GraduationCap, School, Menu
+  ChevronRight, Shield, GraduationCap, School, Loader2
 } from 'lucide-react';
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth();
+  // PERBAIKAN DI SINI: Ubah 'logout' kembali menjadi 'signOut'
+  const { user, signOut } = useAuth(); 
   const navigate = useNavigate();
   
   const [profile, setProfile] = useState(null);
@@ -23,11 +24,19 @@ const Dashboard = () => {
       if (user) {
         setLoading(true);
         try {
+          // 1. Ambil Profil
           const userRes = await fetchUserProfile(user.id);
           setProfile(userRes); 
           
-          let postsData = activeTab === 'jelajah' ? await fetchAllPosts() : await fetchMyPosts(user.id);
+          // 2. Ambil Postingan
+          let postsData = [];
+          if (activeTab === 'jelajah') {
+            postsData = await fetchPosts();
+          } else {
+            postsData = await fetchMyPosts();
+          }
           setPosts(postsData);
+
         } catch (err) {
           console.error("Gagal load data:", err);
         } finally {
@@ -39,56 +48,64 @@ const Dashboard = () => {
   }, [user, activeTab]);
 
   const handleLogout = async () => {
-    await signOut();
+    // PERBAIKAN DI SINI: Panggil 'signOut()'
+    await signOut(); 
     navigate('/login');
   };
 
-  const formatDate = (date) => new Date(date).toLocaleDateString('id-ID', {
-    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'
-  });
+  const handleDetailClick = (id) => {
+    navigate(`/post/${id}`);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('id-ID', {
+      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'
+    });
+  };
 
   // Helper Label & Icon
   const getRoleLabel = (role) => {
-    // Pastikan role string aman (lowercase)
     const r = role ? role.toLowerCase() : 'mahasiswa';
     if (r === 'dosen') return 'Bapak/Ibu Dosen';
     if (r === 'satpam') return 'Pak Satpam';
+    if (r === 'admin') return 'Administrator';
     return 'Mahasiswa';
   };
 
   const getRoleIcon = (role) => {
     const r = role ? role.toLowerCase() : 'mahasiswa';
-    if (r === 'dosen') return <GraduationCap size={32} />;
-    if (r === 'satpam') return <Shield size={32} />;
-    return <School size={32} />;
+    if (r === 'dosen') return <GraduationCap size={24} />;
+    if (r === 'satpam') return <Shield size={24} />;
+    return <School size={24} />;
   };
 
-  // Komponen Navigasi Desktop
+  // Komponen Sidebar Button (Desktop)
   const NavButton = ({ icon, label, isActive, onClick }) => (
     <button 
       onClick={onClick}
       className={`relative flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 w-full mb-1.5
         ${isActive 
-          ? 'bg-orange-500 text-white shadow-md' 
+          ? 'bg-orange-500 text-white shadow-md shadow-orange-900/20' 
           : 'text-slate-300 hover:bg-white/10 hover:text-white'
         } ${isSidebarHovered ? 'justify-start' : 'justify-center'}`}
     >
-      <span className="flex-shrink-0">{icon}</span>
-      <span className={`whitespace-nowrap font-medium text-sm transition-all duration-300 
-        ${isSidebarHovered ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'}`}>
+      <span className="flex-shrink-0 transition-transform duration-300 group-hover:scale-110">{icon}</span>
+      <span className={`whitespace-nowrap font-medium text-sm transition-all duration-300 origin-left
+        ${isSidebarHovered ? 'opacity-100 scale-100 ml-2' : 'opacity-0 scale-0 w-0 overflow-hidden'}`}>
         {label}
       </span>
     </button>
   );
 
-  // Komponen Navigasi Mobile (Bottom Bar)
+  // Komponen Mobile Nav Button
   const MobileNavButton = ({ icon, label, isActive, onClick }) => (
     <button 
       onClick={onClick}
-      className={`flex flex-col items-center justify-center w-full py-2
+      className={`flex flex-col items-center justify-center w-full py-2 active:scale-95 transition-transform
         ${isActive ? 'text-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
     >
-      <div className={`p-1 rounded-lg mb-1 transition-all ${isActive ? 'bg-orange-50' : ''}`}>
+      <div className={`p-1.5 rounded-lg mb-0.5 transition-colors ${isActive ? 'bg-orange-50' : 'bg-transparent'}`}>
         {icon}
       </div>
       <span className="text-[10px] font-medium">{label}</span>
@@ -96,171 +113,231 @@ const Dashboard = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans">
+    <div className="min-h-screen bg-slate-50 flex font-sans overflow-hidden">
       
-      {/* === 1. SIDEBAR (DESKTOP ONLY) === */}
-      {/* Hidden di mobile (md:flex) */}
+      {/* === 1. SIDEBAR (DESKTOP) === */}
       <aside 
         onMouseEnter={() => setIsSidebarHovered(true)}
         onMouseLeave={() => setIsSidebarHovered(false)}
         className={`hidden md:flex flex-col justify-between fixed left-0 top-0 h-screen 
-          bg-[#0a1e3f] text-white z-50 pt-6 pb-6 shadow-xl border-r border-white/5 transition-all duration-300
-          ${isSidebarHovered ? 'w-64 px-4' : 'w-20 px-2'}`}
+          bg-[#0a1e3f] text-white z-50 py-6 shadow-2xl border-r border-white/5 transition-all duration-300 ease-in-out
+          ${isSidebarHovered ? 'w-72 px-4' : 'w-24 px-3'}`}
       >
         <div>
-          {/* Logo */}
-          <div className={`flex items-center mb-10 mt-2 transition-all ${isSidebarHovered ? 'justify-start pl-2 gap-3' : 'justify-center'}`}>
-            <div className="bg-white p-1.5 rounded-lg flex-shrink-0">
-              <img src="/src/assets/ulbi-logo.png" alt="Logo" className="h-6 w-auto" />
+          {/* Logo Section */}
+          <div className={`flex items-center mb-12 mt-2 transition-all duration-300 ${isSidebarHovered ? 'justify-start pl-2 gap-4' : 'justify-center'}`}>
+            <div className="bg-white p-2 rounded-xl flex-shrink-0 shadow-lg shadow-blue-900/50">
+              <img src="/src/assets/ulbi-logo.png" alt="ULBI" className="h-6 w-auto" />
+              <School className="h-8 w-8 text-[#0a1e3f] hidden peer-placeholder-shown:block" />
             </div>
-            <div className={`overflow-hidden transition-all duration-300 ${isSidebarHovered ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
-               <h1 className="text-lg font-bold leading-none tracking-wide">ULBI</h1>
-               <p className="text-[9px] text-orange-400 font-bold tracking-wider">LOST & FOUND</p>
+            <div className={`overflow-hidden transition-all duration-300 flex flex-col ${isSidebarHovered ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
+               <h1 className="text-xl font-black leading-none tracking-wide text-white">ULBI</h1>
+               <p className="text-[10px] text-orange-400 font-bold tracking-[0.2em] mt-1">LOST & FOUND</p>
             </div>
           </div>
 
-          {/* Menu */}
-          <div className="space-y-1">
-            <NavButton icon={<Search size={20} />} label="Jelajah Barang" isActive={activeTab === 'jelajah'} onClick={() => setActiveTab('jelajah')} />
-            <NavButton icon={<List size={20} />} label="Riwayat Saya" isActive={activeTab === 'saya'} onClick={() => setActiveTab('saya')} />
-            <NavButton icon={<User size={20} />} label="Profil Akun" onClick={() => navigate('/profile')} isActive={false} />
-            <div className="my-4 border-t border-white/10 mx-2"></div>
-            <NavButton icon={<MessageSquare size={20} />} label="Bantuan Admin" onClick={() => window.location.href = 'mailto:admin@ulbi.ac.id'} isActive={false} />
+          {/* Navigation Menu */}
+          <div className="space-y-2">
+            <NavButton icon={<Search size={22} />} label="Jelajah Barang" isActive={activeTab === 'jelajah'} onClick={() => setActiveTab('jelajah')} />
+            <NavButton icon={<List size={22} />} label="Riwayat Saya" isActive={activeTab === 'saya'} onClick={() => setActiveTab('saya')} />
+            <NavButton icon={<User size={22} />} label="Profil Akun" onClick={() => navigate('/profile')} isActive={false} />
+            
+            <div className="my-6 border-t border-white/10 mx-2"></div>
+            
+            <NavButton icon={<MessageSquare size={22} />} label="Bantuan Admin" onClick={() => window.open('mailto:admin@ulbi.ac.id')} isActive={false} />
           </div>
         </div>
 
-        {/* Logout */}
-        <button onClick={handleLogout} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-red-300 hover:bg-white/5 hover:text-red-200 transition-all ${isSidebarHovered ? '' : 'justify-center'}`}>
-          <LogOut size={20} />
-          <span className={`whitespace-nowrap font-medium text-sm transition-all ${isSidebarHovered ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'}`}>Keluar</span>
+        {/* Logout Section */}
+        <button 
+          onClick={handleLogout} 
+          className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-all group
+          ${isSidebarHovered ? '' : 'justify-center'}`}
+        >
+          <LogOut size={22} className="group-hover:-translate-x-1 transition-transform"/>
+          <span className={`whitespace-nowrap font-medium text-sm transition-all duration-300 ${isSidebarHovered ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'}`}>
+            Keluar Aplikasi
+          </span>
         </button>
       </aside>
 
-
-      {/* === 2. BOTTOM NAVIGATION (MOBILE ONLY) === */}
-      {/* Hidden di desktop (md:hidden) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-16 flex items-center justify-around z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <MobileNavButton icon={<Search size={20}/>} label="Jelajah" isActive={activeTab === 'jelajah'} onClick={() => setActiveTab('jelajah')} />
-        <MobileNavButton icon={<List size={20}/>} label="Riwayat" isActive={activeTab === 'saya'} onClick={() => setActiveTab('saya')} />
-        <MobileNavButton icon={<User size={20}/>} label="Profil" onClick={() => navigate('/profile')} isActive={false} />
-        <button onClick={handleLogout} className="flex flex-col items-center justify-center w-full text-red-400">
-           <LogOut size={20} className="mb-1"/>
+      {/* === 2. BOTTOM NAVIGATION (MOBILE) === */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-200 h-20 pb-2 flex items-center justify-around z-50 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)]">
+        <MobileNavButton icon={<Search size={24}/>} label="Jelajah" isActive={activeTab === 'jelajah'} onClick={() => setActiveTab('jelajah')} />
+        <MobileNavButton icon={<List size={24}/>} label="Riwayat" isActive={activeTab === 'saya'} onClick={() => setActiveTab('saya')} />
+        <div className="relative -top-6">
+          <button 
+             onClick={() => navigate('/lapor')}
+             className="bg-[#0a1e3f] text-white p-4 rounded-full shadow-lg shadow-blue-900/40 hover:scale-105 transition-transform active:scale-95"
+          >
+            <PlusCircle size={28} />
+          </button>
+        </div>
+        <MobileNavButton icon={<User size={24}/>} label="Profil" onClick={() => navigate('/profile')} isActive={false} />
+        <button onClick={handleLogout} className="flex flex-col items-center justify-center w-full py-2 text-red-400 active:scale-95 transition-transform">
+           <LogOut size={24} className="mb-0.5"/>
            <span className="text-[10px] font-medium">Keluar</span>
         </button>
       </div>
 
-
-      {/* === 3. MAIN CONTENT AREA === */}
-      {/* Margin kiri 20 (lebar sidebar minimize) di desktop, margin bawah 16 di mobile */}
-      <main className="flex-1 w-full bg-slate-50 min-h-screen transition-all md:pl-24 pt-6 px-4 md:px-8 pb-24 md:pb-10">
+      {/* === 3. MAIN CONTENT === */}
+      <main className={`flex-1 bg-slate-50 min-h-screen transition-all duration-300 
+        md:pl-28 ${isSidebarHovered ? 'md:ml-64' : 'md:ml-0'} 
+        pt-6 px-4 md:px-10 pb-28 md:pb-12 h-screen overflow-y-auto`}
+      >
         
-        {/* Header User Card - PASTI MUNCUL KARENA TIDAK ADA ANIMASI */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-blue-50 text-[#0a1e3f] rounded-2xl flex items-center justify-center">
+        {/* Header User Card */}
+        <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
+          {/* Background Decor */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-orange-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50 pointer-events-none"></div>
+          
+          <div className="flex items-center gap-5 relative z-10">
+            <div className="w-16 h-16 bg-[#0a1e3f] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/20">
                {profile ? getRoleIcon(profile.role_name) : <User />}
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl font-bold text-[#0a1e3f]">
-                Halo, {getRoleLabel(profile?.role_name)} <span className="text-orange-600">{profile?.nama_lengkap || 'User'}</span>
+              <h2 className="text-xl md:text-3xl font-black text-[#0a1e3f] tracking-tight">
+                Halo, <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-orange-400">
+                  {profile?.nama_lengkap ? profile.nama_lengkap.split(' ')[0] : 'User'}!
+                </span>
               </h2>
-              <p className="text-slate-500 text-sm">
+              <p className="text-slate-500 text-sm md:text-base font-medium mt-1">
                 {profile?.role_name === 'mahasiswa' && profile?.specific?.master_prodi?.nama_prodi 
-                  ? `Prodi ${profile.specific.master_prodi.nama_prodi}`
-                  : 'Selamat datang di dashboard pelaporan.'}
+                  ? `Mahasiswa Prodi ${profile.specific.master_prodi.nama_prodi}`
+                  : `Selamat datang, ${getRoleLabel(profile?.role_name)}`}
               </p>
             </div>
           </div>
 
-          <div className="flex w-full md:w-auto gap-2">
+          <div className="flex w-full md:w-auto gap-3 relative z-10">
             <button 
               onClick={() => navigate('/lapor', { state: { tipe: 'kehilangan' } })}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#0a1e3f] text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg hover:bg-blue-900 transition-transform active:scale-95"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#0a1e3f] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg hover:bg-blue-900 hover:shadow-blue-900/30 transition-all active:scale-95"
             >
-              <PlusCircle size={16} /> Lapor Hilang
+              <PlusCircle size={18} /> Lapor Hilang
             </button>
             <button 
               onClick={() => navigate('/lapor', { state: { tipe: 'ditemukan' } })}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white text-[#0a1e3f] border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-transform active:scale-95"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white text-[#0a1e3f] border-2 border-slate-100 px-6 py-3 rounded-xl text-sm font-bold hover:border-slate-200 hover:bg-slate-50 transition-all active:scale-95"
             >
-              <PlusCircle size={16} /> Lapor Temuan
+              <PlusCircle size={18} /> Lapor Temuan
             </button>
           </div>
         </div>
 
-        {/* Judul Section */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className={`w-1.5 h-6 rounded-full ${activeTab === 'jelajah' ? 'bg-blue-600' : 'bg-orange-500'}`}></div>
-          <h3 className="text-lg font-bold text-slate-800">
-            {activeTab === 'jelajah' ? 'Barang Terkini' : 'Riwayat Laporan Saya'}
-          </h3>
+        {/* Tab & Judul */}
+        <div className="flex items-center gap-4 mb-8">
+           <div className={`p-2 rounded-lg ${activeTab === 'jelajah' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+              {activeTab === 'jelajah' ? <Search size={20}/> : <List size={20}/>}
+           </div>
+           <div>
+             <h3 className="text-xl font-bold text-slate-800">
+               {activeTab === 'jelajah' ? 'Jelajah Barang Terkini' : 'Riwayat Laporan Saya'}
+             </h3>
+             <p className="text-slate-400 text-xs">
+                {activeTab === 'jelajah' ? 'Daftar semua laporan kehilangan & temuan' : 'Memantau status laporan yang Anda buat'}
+             </p>
+           </div>
         </div>
 
         {/* Content Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-pulse">
-            {[1, 2, 3].map((i) => <div key={i} className="h-64 bg-slate-200 rounded-2xl"></div>)}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white rounded-3xl h-80 p-4 border border-slate-100 shadow-sm flex flex-col gap-4 animate-pulse">
+                 <div className="w-full h-40 bg-slate-200 rounded-2xl"></div>
+                 <div className="w-3/4 h-6 bg-slate-200 rounded-full"></div>
+                 <div className="w-1/2 h-4 bg-slate-200 rounded-full"></div>
+                 <div className="flex-1"></div>
+                 <div className="w-full h-10 bg-slate-200 rounded-xl"></div>
+              </div>
+            ))}
           </div>
         ) : posts.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center">
-            <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400">
-              <Search size={24} />
+          <div className="bg-white border-2 border-dashed border-slate-200 rounded-[2rem] p-16 text-center flex flex-col items-center justify-center">
+            <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mb-6 text-slate-300">
+              <Search size={32} />
             </div>
-            <p className="text-slate-500 text-sm">Belum ada data laporan.</p>
+            <h4 className="text-lg font-bold text-slate-700 mb-1">Belum ada data laporan</h4>
+            <p className="text-slate-400 text-sm max-w-xs mx-auto">
+              Saat ini belum ada data yang tersedia untuk kategori ini. Cobalah untuk membuat laporan baru.
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20">
             {posts.map((item) => (
               <div 
                 key={item.id_postingan} 
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col h-full"
+                className="group bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1"
               >
                 {/* Gambar */}
-                <div className="h-48 bg-slate-100 relative overflow-hidden group">
+                <div className="h-52 bg-slate-100 relative overflow-hidden">
                   {item.foto_barang && item.foto_barang.length > 10 ? (
-                    <img src={item.foto_barang} alt={item.nama_barang} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                    <img src={item.foto_barang} alt={item.nama_barang} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-300">
-                      <List size={32} />
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 bg-slate-50">
+                      <List size={40} className="mb-2 opacity-20"/>
+                      <span className="text-xs font-medium">No Image</span>
                     </div>
                   )}
-                  <div className={`absolute top-3 left-3 px-2 py-1 rounded-md text-[10px] font-bold text-white uppercase tracking-wider
-                    ${item.tipe_postingan === 'kehilangan' ? 'bg-red-500' : 'bg-green-600'}`}>
+                  
+                  {/* Badge Tipe */}
+                  <div className={`absolute top-4 left-4 px-3 py-1.5 rounded-lg text-[10px] font-black text-white uppercase tracking-wider shadow-lg
+                    ${item.tipe_postingan === 'kehilangan' ? 'bg-red-500' : 'bg-emerald-500'}`}>
                     {item.tipe_postingan}
                   </div>
+
+                  {/* Badge Status (Jika tab Saya) */}
+                  {activeTab === 'saya' && (
+                     <div className={`absolute bottom-4 right-4 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white uppercase tracking-wider shadow-lg backdrop-blur-md
+                      ${item.status_postingan === 'aktif' ? 'bg-blue-600/80' : 'bg-slate-800/80'}`}>
+                      {item.status_postingan}
+                    </div>
+                  )}
                 </div>
 
-                {/* Info */}
-                <div className="p-4 flex flex-col flex-1">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider border border-slate-200 px-1.5 py-0.5 rounded">
-                      {item.kategori || 'UMUM'}
+                {/* Info Content */}
+                <div className="p-6 flex flex-col flex-1">
+                  <div className="flex justify-between items-start mb-3">
+                    <span className="text-[10px] font-bold text-[#0a1e3f] uppercase tracking-wider bg-blue-50 border border-blue-100 px-2 py-1 rounded-md">
+                      {item.master_kategori?.nama_kategori || 'UMUM'}
                     </span>
-                    <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                      <Clock size={10} /> {formatDate(item.tgl_postingan)}
+                    <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium bg-slate-50 px-2 py-1 rounded-full">
+                      <Clock size={12} /> {formatDate(item.created_at)}
                     </span>
                   </div>
                   
-                  <h4 className="text-md font-bold text-slate-800 mb-1 line-clamp-1">{item.nama_barang}</h4>
-                  <p className="text-xs text-slate-500 flex items-center gap-1 mb-3">
-                    <MapPin size={12} className="text-orange-500"/> {item.lokasi_terlapor}
-                  </p>
+                  <h4 className="text-lg font-bold text-slate-800 mb-2 line-clamp-1 group-hover:text-orange-600 transition-colors">
+                    {item.nama_barang}
+                  </h4>
                   
-                  <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-4 flex-1">
+                  <div className="flex items-start gap-1.5 mb-4">
+                     <MapPin size={14} className="text-orange-500 mt-0.5 flex-shrink-0"/> 
+                     <span className="text-xs text-slate-500 font-medium line-clamp-1">{item.lokasi_terlapor}</span>
+                  </div>
+                  
+                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-6 flex-1">
                     {item.deskripsi}
                   </p>
 
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">
-                        {item.akun_pengguna?.nama_lengkap?.charAt(0) || '?'}
+                  <div className="pt-4 border-t border-slate-50 flex items-center justify-between mt-auto">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                        {item.akun_pengguna?.nama_lengkap?.charAt(0).toUpperCase() || '?'}
                       </div>
-                      <span className="text-xs font-medium text-slate-500 truncate max-w-[80px]">
-                        {item.akun_pengguna?.nama_lengkap?.split(' ')[0]}
-                      </span>
+                      <div className="flex flex-col">
+                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Pelapor</span>
+                         <span className="text-xs font-bold text-slate-700 truncate max-w-[80px]">
+                           {item.akun_pengguna?.nama_lengkap?.split(' ')[0]}
+                         </span>
+                      </div>
                     </div>
-                    <button className="text-xs font-bold text-blue-600 flex items-center gap-1 hover:underline">
-                      Detail <ChevronRight size={12} />
+                    
+                    <button 
+                      onClick={() => handleDetailClick(item.id_postingan)}
+                      className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-[#0a1e3f] hover:text-white transition-all duration-300 shadow-sm hover:shadow-lg"
+                    >
+                      <ChevronRight size={18} />
                     </button>
                   </div>
                 </div>
