@@ -5,7 +5,7 @@ import { fetchUserProfile, fetchPosts, fetchMyPosts } from '../services/api';
 import { 
   LogOut, User, PlusCircle, Search, 
   List, MessageSquare, Clock, MapPin, 
-  ChevronRight, Shield, GraduationCap, School, Loader2
+  ChevronRight, Shield, GraduationCap, School, Loader2, LayoutGrid, Gift, AlertTriangle
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -17,7 +17,7 @@ const Dashboard = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(''); // State untuk search
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const initData = async () => {
@@ -30,7 +30,6 @@ const Dashboard = () => {
           let postsData = [];
           if (activeTab === 'jelajah') {
             const allPosts = await fetchPosts();
-            // Filter: Hanya tampilkan yang aktif
             postsData = allPosts.filter(p => p.status_postingan === 'aktif');
           } else {
             postsData = await fetchMyPosts();
@@ -59,26 +58,24 @@ const Dashboard = () => {
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('id-ID', {
-      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit'
+      day: 'numeric', month: 'short', year: 'numeric'
     });
   };
 
   const getRoleLabel = (role) => {
     const r = role ? role.toLowerCase() : 'mahasiswa';
-    if (r === 'dosen') return 'Bapak/Ibu Dosen';
-    if (r === 'satpam') return 'Pak Satpam';
-    if (r === 'admin') return 'Administrator';
+    if (r === 'dosen') return 'Dosen';
+    if (r === 'satpam') return 'Satpam';
     return 'Mahasiswa';
   };
 
   const getRoleIcon = (role) => {
     const r = role ? role.toLowerCase() : 'mahasiswa';
-    if (r === 'dosen') return <GraduationCap size={24} />;
-    if (r === 'satpam') return <Shield size={24} />;
-    return <School size={24} />;
+    if (r === 'dosen') return <GraduationCap size={20} />;
+    if (r === 'satpam') return <Shield size={20} />;
+    return <School size={20} />;
   };
 
-  // Filter Search Logic
   const filteredPosts = posts.filter(post => 
     post.nama_barang.toLowerCase().includes(searchTerm.toLowerCase()) ||
     post.deskripsi.toLowerCase().includes(searchTerm.toLowerCase())
@@ -87,15 +84,15 @@ const Dashboard = () => {
   const NavButton = ({ icon, label, isActive, onClick }) => (
     <button 
       onClick={onClick}
-      className={`relative flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 w-full mb-1.5
+      className={`relative flex items-center gap-1 px-4 py-3.5 rounded-xl transition-all duration-300 w-full mb-1.5
         ${isActive 
-          ? 'bg-orange-500 text-white shadow-md shadow-orange-900/20' 
-          : 'text-slate-300 hover:bg-white/10 hover:text-white'
+          ? 'bg-orange-500 text-white shadow-lg shadow-orange-900/20' 
+          : 'text-blue-200 hover:bg-white/10 hover:text-white'
         } ${isSidebarHovered ? 'justify-start' : 'justify-center'}`}
     >
       <span className="flex-shrink-0 transition-transform duration-300 group-hover:scale-110">{icon}</span>
       <span className={`whitespace-nowrap font-medium text-sm transition-all duration-300 origin-left
-        ${isSidebarHovered ? 'opacity-100 scale-100 ml-2' : 'opacity-0 scale-0 w-0 overflow-hidden'}`}>
+        ${isSidebarHovered ? 'opacity-100 scale-100 ml-3' : 'opacity-0 scale-0 w-0 overflow-hidden'}`}>
         {label}
       </span>
     </button>
@@ -105,7 +102,7 @@ const Dashboard = () => {
     <button 
       onClick={onClick}
       className={`flex flex-col items-center justify-center w-full py-2 active:scale-95 transition-transform
-        ${isActive ? 'text-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
+        ${isActive ? 'text-orange-500' : 'text-slate-400 hover:text-slate-600'}`}
     >
       <div className={`p-1.5 rounded-lg mb-0.5 transition-colors ${isActive ? 'bg-orange-50' : 'bg-transparent'}`}>
         {icon}
@@ -115,7 +112,7 @@ const Dashboard = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans overflow-hidden">
+    <div className="min-h-screen bg-[#F1F5F9] flex font-sans overflow-hidden">
       
       {/* SIDEBAR */}
       <aside 
@@ -128,8 +125,8 @@ const Dashboard = () => {
         <div>
           <div className={`flex items-center mb-12 mt-2 transition-all duration-300 ${isSidebarHovered ? 'justify-start pl-2 gap-4' : 'justify-center'}`}>
             <div className="bg-white p-2 rounded-xl flex-shrink-0 shadow-lg shadow-blue-900/50">
-              <img src="/src/assets/ulbi-logo.png" alt="ULBI" className="h-6 w-auto" />
-              <School className="h-8 w-8 text-[#0a1e3f] hidden peer-placeholder-shown:block" />
+              <img src="/src/assets/ulbi-logo.png" onError={(e) => e.target.style.display='none'} alt="U" className="h-6 w-auto" />
+              <School className="h-6 w-6 text-[#0a1e3f] hidden peer-placeholder-shown:block" />
             </div>
             <div className={`overflow-hidden transition-all duration-300 flex flex-col ${isSidebarHovered ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
                <h1 className="text-xl font-black leading-none tracking-wide text-white">ULBI</h1>
@@ -142,13 +139,13 @@ const Dashboard = () => {
             <NavButton icon={<List size={22} />} label="Riwayat Saya" isActive={activeTab === 'saya'} onClick={() => setActiveTab('saya')} />
             <NavButton icon={<User size={22} />} label="Profil Akun" onClick={() => navigate('/profile')} isActive={false} />
             <div className="my-6 border-t border-white/10 mx-2"></div>
-            <NavButton icon={<MessageSquare size={22} />} label="Bantuan Admin" onClick={() => window.open('mailto:admin@ulbi.ac.id')} isActive={false} />
+            <NavButton icon={<MessageSquare size={22} />} label="Hubungi Admin" onClick={() => window.open('mailto:admin@ulbi.ac.id')} isActive={false} />
           </div>
         </div>
 
         <button onClick={handleLogout} className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-all group ${isSidebarHovered ? '' : 'justify-center'}`}>
           <LogOut size={22} className="group-hover:-translate-x-1 transition-transform"/>
-          <span className={`whitespace-nowrap font-medium text-sm transition-all duration-300 ${isSidebarHovered ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'}`}>
+          <span className={`whitespace-nowrap font-medium text-sm transition-all duration-300 ${isSidebarHovered ? 'opacity-100 w-auto ml-3' : 'opacity-0 w-0 overflow-hidden'}`}>
             Keluar Aplikasi
           </span>
         </button>
@@ -174,7 +171,7 @@ const Dashboard = () => {
       <main className={`flex-1 bg-slate-50 min-h-screen transition-all duration-300 md:pl-28 ${isSidebarHovered ? 'md:ml-64' : 'md:ml-0'} pt-6 px-4 md:px-10 pb-28 md:pb-12 h-screen overflow-y-auto`}>
         
         {/* Header User Card */}
-        <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
+        <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden animate-[fadeIn_0.6s_ease-out]">
           <div className="absolute top-0 right-0 w-64 h-64 bg-orange-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50 pointer-events-none"></div>
           
           <div className="flex items-center gap-5 relative z-10">
@@ -197,108 +194,124 @@ const Dashboard = () => {
 
           <div className="flex w-full md:w-auto gap-3 relative z-10">
             <button onClick={() => navigate('/lapor', { state: { tipe: 'kehilangan' } })} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#0a1e3f] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg hover:bg-blue-900 transition-all active:scale-95">
-              <PlusCircle size={18} /> Lapor Hilang
+              <AlertTriangle size={18} className="text-orange-500 group-hover:text-white transition-colors" /> Lapor Hilang
             </button>
             <button onClick={() => navigate('/lapor', { state: { tipe: 'ditemukan' } })} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white text-[#0a1e3f] border-2 border-slate-100 px-6 py-3 rounded-xl text-sm font-bold hover:border-slate-200 hover:bg-slate-50 transition-all active:scale-95">
-              <PlusCircle size={18} /> Lapor Temuan
+              <Gift size={18} className="text-blue-500 group-hover:scale-110 transition-transform" /> Lapor Temuan
             </button>
           </div>
         </div>
 
-        {/* --- UPDATE: BAGIAN TAB & SEARCH BAR --- */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+        {/* --- MODIFIKASI: Tools Bar (Jarak Lebih Lega & Tab Lebih Kecil) --- */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12 animate-[fadeIn_0.8s_ease-out]">
            
-           {/* Bagian Kiri: Icon Tab & Judul */}
-           <div className="flex items-center gap-4">
-              <div className={`p-2 rounded-lg ${activeTab === 'jelajah' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                 {activeTab === 'jelajah' ? <Search size={20}/> : <List size={20}/>}
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-slate-800">
-                  {activeTab === 'jelajah' ? 'Jelajah Barang Terkini' : 'Riwayat Laporan Saya'}
-                </h3>
-                <p className="text-slate-400 text-xs">
-                   {activeTab === 'jelajah' ? 'Daftar semua laporan kehilangan & temuan' : 'Memantau status laporan yang Anda buat'}
-                </p>
-              </div>
+           {/* Bagian Kiri: Judul & Tab Switcher */}
+           <div className="w-full md:w-auto">
+             <div className="flex items-center gap-4 mb-4">
+                <div className={`p-2.5 rounded-xl shadow-sm ${activeTab === 'jelajah' ? 'bg-blue-600 text-white' : 'bg-orange-500 text-white'}`}>
+                    {activeTab === 'jelajah' ? <Search size={20}/> : <List size={20}/>}
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-800">
+                    {activeTab === 'jelajah' ? 'Jelajah Barang' : 'Laporan Saya'}
+                  </h3>
+                  <p className="text-slate-400 text-xs font-medium">
+                      {activeTab === 'jelajah' ? 'Daftar semua laporan aktif' : 'Pantau status laporan Anda'}
+                  </p>
+                </div>
+             </div>
+
+             {/* Tab Switcher (Ukuran Compact & Rounded Halus) */}
+             <div className="inline-flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+                <button 
+                  onClick={() => setActiveTab('jelajah')}
+                  className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'jelajah' ? 'bg-[#0a1e3f] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                >
+                  Semua
+                </button>
+                <button 
+                  onClick={() => setActiveTab('saya')}
+                  className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'saya' ? 'bg-[#0a1e3f] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                >
+                  Milik Saya
+                </button>
+             </div>
            </div>
 
            {/* Bagian Kanan: Search Input */}
-           <div className="relative w-full md:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+           <div className="relative w-full md:w-80 group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
                 type="text" 
-                placeholder="Cari barang..." 
+                placeholder="Cari nama barang..." 
+                className="w-full pl-12 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all text-sm font-medium"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all text-sm font-medium"
               />
            </div>
         </div>
 
-        {/* Content Grid (Menggunakan filteredPosts) */}
+        {/* Content Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white rounded-3xl h-80 p-4 border border-slate-100 shadow-sm flex flex-col gap-4 animate-pulse">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-pulse">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-3xl h-80 p-4 border border-slate-100 shadow-sm flex flex-col gap-4">
                  <div className="w-full h-40 bg-slate-200 rounded-2xl"></div>
                  <div className="w-3/4 h-6 bg-slate-200 rounded-full"></div>
                  <div className="w-1/2 h-4 bg-slate-200 rounded-full"></div>
-                 <div className="flex-1"></div>
-                 <div className="w-full h-10 bg-slate-200 rounded-xl"></div>
               </div>
             ))}
           </div>
         ) : filteredPosts.length === 0 ? (
-          <div className="bg-white border-2 border-dashed border-slate-200 rounded-[2rem] p-16 text-center flex flex-col items-center justify-center">
-            <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mb-6 text-slate-300">
-              <Search size={32} />
+          <div className="bg-white border-2 border-dashed border-slate-200 rounded-[2rem] p-16 text-center flex flex-col items-center justify-center animate-[fadeInUp_0.5s_ease-out]">
+            <div className="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mb-6 text-slate-300">
+              <Search size={40} />
             </div>
-            <h4 className="text-lg font-bold text-slate-700 mb-1">Tidak ada data ditemukan</h4>
+            <h4 className="text-xl font-bold text-slate-700 mb-2">Tidak ada data ditemukan</h4>
             <p className="text-slate-400 text-sm max-w-xs mx-auto">
               Coba kata kunci lain atau pastikan ejaan barang yang Anda cari benar.
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20">
-            {filteredPosts.map((item) => (
+            {filteredPosts.map((item, index) => (
               <div 
                 key={item.id_postingan} 
-                className="group bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1"
+                className="group bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1 animate-[fadeInUp_0.5s_ease-out_forwards] opacity-0"
+                style={{ animationDelay: `${index * 0.1}s` }}
               >
-                {/* Gambar */}
-                <div className="h-52 bg-slate-100 relative overflow-hidden">
+                <div className="h-56 bg-slate-100 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a1e3f]/60 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  
                   {item.foto_barang && item.foto_barang.length > 10 ? (
                     <img src={item.foto_barang} alt={item.nama_barang} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 bg-slate-50">
-                      <List size={40} className="mb-2 opacity-20"/>
+                      <LayoutGrid size={40} className="mb-2 opacity-50"/>
                       <span className="text-xs font-medium">No Image</span>
                     </div>
                   )}
                   
-                  {/* Badge Tipe */}
-                  <div className={`absolute top-4 left-4 px-3 py-1.5 rounded-lg text-[10px] font-black text-white uppercase tracking-wider shadow-lg
-                    ${item.tipe_postingan === 'kehilangan' ? 'bg-red-500' : 'bg-emerald-500'}`}>
+                  <div className={`absolute top-4 left-4 px-3 py-1.5 rounded-xl text-[10px] font-black text-white uppercase tracking-wider shadow-lg flex items-center gap-1.5 backdrop-blur-md
+                    ${item.tipe_postingan === 'kehilangan' ? 'bg-red-500/90' : 'bg-emerald-500/90'}`}>
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
                     {item.tipe_postingan}
                   </div>
 
-                  {/* Badge Status (Jika tab Saya) */}
                   {activeTab === 'saya' && (
-                     <div className={`absolute bottom-4 right-4 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white uppercase tracking-wider shadow-lg backdrop-blur-md
+                     <div className={`absolute bottom-4 right-4 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white uppercase tracking-wider shadow-lg backdrop-blur-md z-20
                       ${item.status_postingan === 'aktif' ? 'bg-blue-600/80' : 'bg-slate-800/80'}`}>
                       {item.status_postingan}
                     </div>
                   )}
                 </div>
 
-                {/* Info Content */}
                 <div className="p-6 flex flex-col flex-1">
                   <div className="flex justify-between items-start mb-3">
-                    <span className="text-[10px] font-bold text-[#0a1e3f] uppercase tracking-wider bg-blue-50 border border-blue-100 px-2 py-1 rounded-md">
+                    <span className="text-[10px] font-bold text-[#0a1e3f] uppercase tracking-wider bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">
                       {item.master_kategori?.nama_kategori || 'UMUM'}
                     </span>
-                    <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium bg-slate-50 px-2 py-1 rounded-full">
+                    <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
                       <Clock size={12} /> {formatDate(item.created_at)}
                     </span>
                   </div>
@@ -316,9 +329,9 @@ const Dashboard = () => {
                     {item.deskripsi}
                   </p>
 
-                  <div className="pt-4 border-t border-slate-50 flex items-center justify-between mt-auto">
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                      <div className="w-8 h-8 rounded-full bg-[#0a1e3f] flex items-center justify-center text-[10px] font-bold text-white">
                         {item.akun_pengguna?.nama_lengkap?.charAt(0).toUpperCase() || '?'}
                       </div>
                       <div className="flex flex-col">
@@ -331,9 +344,9 @@ const Dashboard = () => {
                     
                     <button 
                       onClick={() => handleDetailClick(item.id_postingan)}
-                      className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-[#0a1e3f] hover:text-white transition-all duration-300 shadow-sm hover:shadow-lg"
+                      className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-[#0a1e3f] hover:text-white transition-all duration-300 shadow-sm hover:shadow-lg group/btn"
                     >
-                      <ChevronRight size={18} />
+                      <ChevronRight size={18} className="group-hover/btn:translate-x-0.5 transition-transform" />
                     </button>
                   </div>
                 </div>
@@ -342,6 +355,17 @@ const Dashboard = () => {
           </div>
         )}
       </main>
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 };
