@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext'; //merah doang g ngaruh
+import { useAuth } from '../context/AuthContext'; 
 import { createPost, fetchCategories } from '../services/api';
 import { supabase } from '../services/supabaseClient'; 
-// PERBAIKAN: Menambahkan AlertCircle ke dalam import
 import { 
   ArrowLeft, UploadCloud, MapPin, Calendar, FileText, 
-  HelpCircle, Camera, Loader2, X, AlertTriangle, CheckCircle, Info, AlertCircle 
+  HelpCircle, Camera, Loader2, X, AlertTriangle, CheckCircle2, Info
 } from 'lucide-react';
 
 const LaporBarang = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   // Default tipe dari navigasi sebelumnya, atau default 'kehilangan'
-  const tipe = state?.tipe || 'kehilangan'; 
+  const defaultTipe = state?.tipe || 'kehilangan';
   
   // State Form
   const [form, setForm] = useState({
@@ -25,7 +25,7 @@ const LaporBarang = () => {
     waktu_kejadian: '',
     pertanyaan_keamanan: '', 
     foto_barang: null, 
-    tipe_postingan: tipe
+    tipe_postingan: defaultTipe
   });
 
   // State Pendukung
@@ -110,134 +110,171 @@ const LaporBarang = () => {
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-12">
       
-      {/* Header Area */}
-      <div className="bg-[#0a1e3f] pb-32 pt-8 px-4 relative overflow-hidden">
+      {/* --- HEADER --- */}
+      <div className="bg-[#0a1e3f] pb-32 pt-8 px-4 relative overflow-hidden shadow-lg">
+        {/* Dekorasi Latar Belakang */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500 rounded-full blur-3xl opacity-10 -mr-20 -mt-20 pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500 rounded-full blur-3xl opacity-10 -ml-20 -mb-20 pointer-events-none"></div>
+
         <div className="max-w-5xl mx-auto relative z-10">
           <button 
             onClick={() => navigate('/dashboard')} 
-            className="flex items-center gap-2 text-blue-200 hover:text-white transition-colors mb-6 text-sm font-medium"
+            className="flex items-center gap-2 text-blue-200 hover:text-white transition-colors mb-8 text-sm font-bold bg-white/10 px-4 py-2 rounded-full w-fit hover:bg-white/20"
           >
             <ArrowLeft size={18} /> Kembali ke Dashboard
           </button>
-          <h1 className="text-3xl font-bold text-white mb-2">Formulir Pelaporan</h1>
-          <p className="text-blue-200">Isi detail barang dengan lengkap untuk mempercepat proses pencarian.</p>
+          
+          <div className="flex flex-col md:flex-row justify-between items-end gap-4">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-extrabold text-white mb-2 tracking-tight">
+                Buat Laporan <span className="text-[#f97316]">Baru</span>
+              </h1>
+              <p className="text-blue-100 text-lg max-w-2xl font-light">
+                Isi formulir di bawah ini dengan detail yang akurat untuk membantu proses pencarian atau pengembalian barang.
+              </p>
+            </div>
+            {/* Info User Singkat */}
+            <div className="hidden md:flex items-center gap-3 bg-[#0f2952] px-4 py-2 rounded-xl border border-blue-800">
+                <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-xs">
+                    {user?.user_metadata?.full_name?.charAt(0) || 'U'}
+                </div>
+                <div className="text-right">
+                    <p className="text-xs text-blue-200 font-bold">Pelapor</p>
+                    <p className="text-xs text-white truncate max-w-[150px]">{user?.email}</p>
+                </div>
+            </div>
+          </div>
         </div>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
       </div>
 
-      {/* Main Content (Floating Card) */}
+      {/* --- MAIN FORM CARD --- */}
       <div className="max-w-5xl mx-auto px-4 -mt-24 relative z-20">
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* KOLOM KIRI: Input Data */}
+          {/* KOLOM KIRI: Input Data Utama */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+              {/* Progress Line */}
+              <div className={`h-1.5 w-full ${isLost ? 'bg-orange-500' : 'bg-[#0a1e3f]'}`}></div>
+              
               <div className="p-8">
                 
-                {/* 1. Toggle Tipe Laporan */}
-                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <Info size={18} className="text-[#f97316]" /> Jenis Laporan
+                {/* 1. Toggle Jenis Laporan */}
+                <h3 className="font-bold text-[#0a1e3f] mb-4 flex items-center gap-2 text-lg">
+                  <Info size={20} className={isLost ? "text-orange-500" : "text-blue-600"} /> 
+                  Jenis Laporan
                 </h3>
+                
                 <div className="grid grid-cols-2 gap-4 mb-8">
-                  <label className={`cursor-pointer border-2 rounded-2xl p-4 text-center transition-all duration-300 relative overflow-hidden group
-                    ${isLost ? 'border-red-500 bg-red-50' : 'border-slate-100 hover:border-red-200 hover:bg-slate-50'}`}>
+                  {/* Tombol Kehilangan */}
+                  <label className={`cursor-pointer border-2 rounded-2xl p-5 text-center transition-all duration-300 relative overflow-hidden group
+                    ${isLost ? 'border-orange-500 bg-orange-50 shadow-md' : 'border-slate-100 hover:border-orange-200 hover:bg-slate-50'}`}>
                     <input 
                       type="radio" name="tipe_postingan" value="kehilangan" 
                       checked={isLost} onChange={(e) => setForm({...form, tipe_postingan: e.target.value})} className="hidden" 
                     />
-                    <div className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-2 transition-colors ${isLost ? 'bg-red-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                      <AlertTriangle size={20} />
+                    <div className={`w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-3 transition-colors ${isLost ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400 group-hover:text-orange-500'}`}>
+                      <AlertTriangle size={24} />
                     </div>
-                    <span className={`font-bold block ${isLost ? 'text-red-700' : 'text-slate-600'}`}>Kehilangan</span>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Saya Mencari Barang</span>
+                    <span className={`font-bold block text-lg ${isLost ? 'text-orange-700' : 'text-slate-600'}`}>Kehilangan</span>
+                    <span className="text-xs text-slate-400 font-medium">Saya mencari barang</span>
+                    {isLost && <div className="absolute top-3 right-3 text-orange-500"><CheckCircle2 size={20} /></div>}
                   </label>
 
-                  <label className={`cursor-pointer border-2 rounded-2xl p-4 text-center transition-all duration-300 relative overflow-hidden group
-                    ${!isLost ? 'border-emerald-500 bg-emerald-50' : 'border-slate-100 hover:border-emerald-200 hover:bg-slate-50'}`}>
+                  {/* Tombol Ditemukan */}
+                  <label className={`cursor-pointer border-2 rounded-2xl p-5 text-center transition-all duration-300 relative overflow-hidden group
+                    ${!isLost ? 'border-[#0a1e3f] bg-blue-50 shadow-md' : 'border-slate-100 hover:border-blue-200 hover:bg-slate-50'}`}>
                     <input 
                       type="radio" name="tipe_postingan" value="ditemukan" 
                       checked={!isLost} onChange={(e) => setForm({...form, tipe_postingan: e.target.value})} className="hidden" 
                     />
-                    <div className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-2 transition-colors ${!isLost ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                      <CheckCircle size={20} />
+                    <div className={`w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-3 transition-colors ${!isLost ? 'bg-[#0a1e3f] text-white' : 'bg-slate-100 text-slate-400 group-hover:text-[#0a1e3f]'}`}>
+                      <CheckCircle2 size={24} />
                     </div>
-                    <span className={`font-bold block ${!isLost ? 'text-emerald-700' : 'text-slate-600'}`}>Menemukan</span>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Saya Menemukan Barang</span>
+                    <span className={`font-bold block text-lg ${!isLost ? 'text-[#0a1e3f]' : 'text-slate-600'}`}>Menemukan</span>
+                    <span className="text-xs text-slate-400 font-medium">Saya menemukan barang</span>
+                    {!isLost && <div className="absolute top-3 right-3 text-[#0a1e3f]"><CheckCircle2 size={20} /></div>}
                   </label>
                 </div>
 
                 {/* 2. Form Input Fields */}
-                <div className="space-y-5">
+                <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Nama Barang</label>
                     <input type="text" required 
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#f97316] focus:ring-4 focus:ring-orange-100 outline-none transition font-medium"
-                      placeholder={isLost ? "Contoh: Laptop ASUS ROG" : "Contoh: Kunci Motor Honda"}
+                      className={`w-full px-5 py-3.5 rounded-xl border bg-slate-50 focus:bg-white outline-none transition font-medium
+                        ${isLost ? 'focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10' : 'focus:border-[#0a1e3f] focus:ring-4 focus:ring-blue-900/10'} border-slate-200`}
+                      placeholder={isLost ? "Contoh: Dompet Kulit Coklat" : "Contoh: Kunci Motor Honda"}
                       value={form.nama_barang} onChange={e => setForm({...form, nama_barang: e.target.value})} 
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Kategori</label>
-                    <div className="relative">
-                      <select 
-                        required
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#f97316] focus:ring-4 focus:ring-orange-100 outline-none transition appearance-none cursor-pointer"
-                        value={form.id_kategori} onChange={e => setForm({...form, id_kategori: e.target.value})}
-                      >
-                        <option value="">Pilih Kategori Barang...</option>
-                        {kategoriList.map((cat) => (
-                          <option key={cat.id_kategori} value={cat.id_kategori}>{cat.nama_kategori}</option>
-                        ))}
-                      </select>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Kategori</label>
+                        <div className="relative">
+                        <select 
+                            required
+                            className={`w-full px-5 py-3.5 rounded-xl border bg-slate-50 focus:bg-white outline-none transition appearance-none cursor-pointer
+                            ${isLost ? 'focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10' : 'focus:border-[#0a1e3f] focus:ring-4 focus:ring-blue-900/10'} border-slate-200`}
+                            value={form.id_kategori} onChange={e => setForm({...form, id_kategori: e.target.value})}
+                        >
+                            <option value="">Pilih Kategori...</option>
+                            {kategoriList.map((cat) => (
+                            <option key={cat.id_kategori} value={cat.id_kategori}>{cat.nama_kategori}</option>
+                            ))}
+                        </select>
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                            <Calendar size={16} className={isLost ? "text-orange-500" : "text-[#0a1e3f]"} /> Waktu Kejadian
+                        </label>
+                        <input type="datetime-local" required 
+                            className={`w-full px-5 py-3.5 rounded-xl border bg-slate-50 focus:bg-white outline-none transition text-slate-600
+                            ${isLost ? 'focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10' : 'focus:border-[#0a1e3f] focus:ring-4 focus:ring-blue-900/10'} border-slate-200`}
+                            value={form.waktu_kejadian} onChange={e => setForm({...form, waktu_kejadian: e.target.value})} 
+                        />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Deskripsi Detail</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                        <MapPin size={16} className={isLost ? "text-orange-500" : "text-[#0a1e3f]"} /> Lokasi Detail
+                    </label>
+                    <input type="text" required 
+                      className={`w-full px-5 py-3.5 rounded-xl border bg-slate-50 focus:bg-white outline-none transition
+                        ${isLost ? 'focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10' : 'focus:border-[#0a1e3f] focus:ring-4 focus:ring-blue-900/10'} border-slate-200`}
+                      placeholder="Contoh: Gedung Rektorat Lantai 1, dekat Lift"
+                      value={form.lokasi} onChange={e => setForm({...form, lokasi: e.target.value})} 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Deskripsi Lengkap</label>
                     <textarea rows="4" required 
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#f97316] focus:ring-4 focus:ring-orange-100 outline-none transition resize-none"
-                      placeholder="Jelaskan ciri-ciri khusus, warna, isi barang, nomor seri, dll..."
+                      className={`w-full px-5 py-3.5 rounded-xl border bg-slate-50 focus:bg-white outline-none transition resize-none
+                        ${isLost ? 'focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10' : 'focus:border-[#0a1e3f] focus:ring-4 focus:ring-blue-900/10'} border-slate-200`}
+                      placeholder="Jelaskan ciri-ciri khusus, warna, isi barang, nomor seri, atau kondisi barang..."
                       value={form.deskripsi} onChange={e => setForm({...form, deskripsi: e.target.value})} 
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-                        <MapPin size={16} className="text-[#f97316]" /> Lokasi
-                      </label>
-                      <input type="text" required 
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#f97316] focus:ring-4 focus:ring-orange-100 outline-none transition"
-                        placeholder="Gedung / Ruangan"
-                        value={form.lokasi} onChange={e => setForm({...form, lokasi: e.target.value})} 
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-                        <Calendar size={16} className="text-[#f97316]" /> Waktu
-                      </label>
-                      <input type="datetime-local" required 
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#f97316] focus:ring-4 focus:ring-orange-100 outline-none transition text-slate-600"
-                        value={form.waktu_kejadian} onChange={e => setForm({...form, waktu_kejadian: e.target.value})} 
-                      />
-                    </div>
-                  </div>
-
                   {/* Pertanyaan Keamanan (Khusus Temuan) */}
                   {!isLost && (
-                    <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 mt-4">
+                    <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 mt-4">
                       <label className="block text-sm font-bold text-[#0a1e3f] mb-2 flex items-center gap-2">
                         <HelpCircle size={18} /> Pertanyaan Validasi (Opsional)
                       </label>
-                      <p className="text-xs text-blue-400 mb-3">
-                        Pertanyaan rahasia untuk memverifikasi pemilik asli barang. Contoh: "Apa gambar wallpaper HP-nya?"
+                      <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                        Untuk keamanan, buatlah satu pertanyaan yang hanya bisa dijawab oleh pemilik asli barang. 
+                        <br/><i>Contoh: "Apa gambar wallpaper HP-nya?" atau "Apa isi gantungan kuncinya?"</i>
                       </p>
                       <input type="text" 
-                        className="w-full px-4 py-3 rounded-xl border border-blue-200 bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-100 outline-none transition"
+                        className="w-full px-5 py-3.5 rounded-xl border border-blue-200 bg-white focus:border-[#0a1e3f] focus:ring-4 focus:ring-blue-900/10 outline-none transition"
                         placeholder="Tulis pertanyaan validasi..."
                         value={form.pertanyaan_keamanan} onChange={e => setForm({...form, pertanyaan_keamanan: e.target.value})} 
                       />
@@ -248,17 +285,21 @@ const LaporBarang = () => {
             </div>
           </div>
 
-          {/* KOLOM KANAN: Upload Foto & Submit */}
+          {/* KOLOM KANAN: Upload & Actions */}
           <div className="space-y-6">
             
             {/* Card Upload */}
-            <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 p-6">
-              <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <Camera size={20} className="text-[#f97316]" /> Foto Barang
+            <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-6">
+              <h3 className="font-bold text-[#0a1e3f] mb-4 flex items-center gap-2">
+                <Camera size={20} className={isLost ? "text-orange-500" : "text-blue-600"} /> Foto Barang
               </h3>
               
-              <div className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-300 relative group
-                ${form.foto_barang ? 'border-green-400 bg-green-50/30' : 'border-slate-300 hover:border-[#f97316] hover:bg-orange-50/30'}`}>
+              <div className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-300 relative group overflow-hidden
+                ${form.foto_barang 
+                    ? 'border-green-400 bg-green-50/20' 
+                    : isLost 
+                        ? 'border-slate-300 hover:border-orange-400 hover:bg-orange-50/20' 
+                        : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50/20'}`}>
                 
                 <input 
                   type="file" accept="image/*" onChange={handleFileChange} disabled={uploading}
@@ -266,41 +307,45 @@ const LaporBarang = () => {
                 />
 
                 {uploading ? (
-                  <div className="py-8 flex flex-col items-center">
-                    <Loader2 className="animate-spin text-[#f97316] mb-2" size={32} />
-                    <span className="text-sm font-medium text-slate-500">Mengupload...</span>
+                  <div className="py-10 flex flex-col items-center">
+                    <Loader2 className={`animate-spin mb-3 ${isLost ? 'text-orange-500' : 'text-[#0a1e3f]'}`} size={36} />
+                    <span className="text-sm font-bold text-slate-600">Sedang Mengupload...</span>
                   </div>
                 ) : form.foto_barang ? (
                   <div className="relative">
-                    <img src={form.foto_barang} alt="Preview" className="w-full h-48 object-contain rounded-lg bg-white shadow-sm p-2" />
+                    <img src={form.foto_barang} alt="Preview" className="w-full h-56 object-contain rounded-xl bg-white shadow-sm border border-slate-100 p-2" />
                     <button 
                       onClick={(e) => { e.preventDefault(); setForm(f => ({...f, foto_barang: null})); }}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-md hover:bg-red-600 z-20"
+                      className="absolute top-2 right-2 bg-white text-red-500 p-2 rounded-full shadow-md hover:bg-red-50 transition z-20"
                     >
-                      <X size={14} />
+                      <X size={18} />
                     </button>
-                    <div className="mt-3 flex items-center justify-center gap-1 text-green-600 text-sm font-bold">
-                      <CheckCircle size={16} /> Foto Terupload
+                    <div className="mt-4 flex items-center justify-center gap-2 text-green-700 text-sm font-bold bg-green-100 py-2 rounded-lg">
+                      <CheckCircle2 size={18} /> Foto Berhasil Diupload
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">Klik untuk mengganti</p>
+                    <p className="text-xs text-slate-400 mt-2">Klik area ini untuk mengganti foto</p>
                   </div>
                 ) : (
-                  <div className="py-8">
-                    <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-white group-hover:text-[#f97316] transition-colors shadow-sm">
-                      <UploadCloud size={28} />
+                  <div className="py-10">
+                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors
+                        ${isLost ? 'bg-orange-50 text-orange-500 group-hover:bg-orange-500 group-hover:text-white' : 'bg-blue-50 text-blue-600 group-hover:bg-[#0a1e3f] group-hover:text-white'}`}>
+                      <UploadCloud size={32} />
                     </div>
-                    <p className="text-sm font-bold text-slate-700">Upload Foto</p>
-                    <p className="text-xs text-slate-400 mt-1">Max 2MB (JPG/PNG)</p>
+                    <p className="text-base font-bold text-slate-700">Upload Foto Barang</p>
+                    <p className="text-xs text-slate-400 mt-1">Format JPG/PNG, Maksimal 2MB</p>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Info Card */}
-            <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100">
-              <h4 className="text-orange-800 font-bold text-sm flex items-center gap-2 mb-2"><AlertCircle size={16} /> Penting!</h4>
-              <ul className="text-xs text-orange-700 space-y-2 list-disc list-inside opacity-90">
+            <div className={`rounded-2xl p-6 border ${isLost ? 'bg-orange-50 border-orange-100' : 'bg-blue-50 border-blue-100'}`}>
+              <h4 className={`font-bold text-sm flex items-center gap-2 mb-3 ${isLost ? 'text-orange-800' : 'text-blue-900'}`}>
+                <AlertTriangle size={18} /> Penting!
+              </h4>
+              <ul className={`text-xs space-y-2 list-disc list-inside ${isLost ? 'text-orange-700' : 'text-blue-800'}`}>
                 <li>Pastikan data yang Anda masukkan jujur & akurat.</li>
+                <li>Gunakan bahasa yang sopan dan jelas.</li>
                 <li>Laporan palsu dapat dikenakan sanksi akademik.</li>
               </ul>
             </div>
@@ -309,14 +354,16 @@ const LaporBarang = () => {
             <button 
               type="submit" 
               disabled={loading || uploading}
-              className={`w-full py-4 rounded-xl font-bold text-white shadow-xl transition-all transform active:scale-[0.98] flex justify-center items-center gap-2
-                ${isLost ? 'bg-[#0a1e3f] hover:bg-[#1e3a8a] shadow-blue-900/20' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-900/20'}
+              className={`w-full py-4 rounded-xl font-bold text-white shadow-xl transition-all transform active:scale-[0.98] flex justify-center items-center gap-3 text-lg
+                ${isLost 
+                  ? 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-orange-500/30' 
+                  : 'bg-gradient-to-r from-[#0a1e3f] to-blue-900 hover:from-blue-900 hover:to-blue-950 shadow-blue-900/30'}
                 ${(loading || uploading) ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               {loading ? (
                 <><Loader2 className="animate-spin" /> Memproses...</>
               ) : (
-                isLost ? 'PUBLIKASIKAN KEHILANGAN' : 'PUBLIKASIKAN TEMUAN'
+                isLost ? <>PUBLIKASIKAN KEHILANGAN <ArrowLeft className="rotate-180" size={20}/></> : <>PUBLIKASIKAN TEMUAN <CheckCircle2 size={20}/></>
               )}
             </button>
 

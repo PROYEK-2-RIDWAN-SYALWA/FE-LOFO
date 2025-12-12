@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Shield, Gift, ArrowRight, CheckCircle, Clock, MapPin, LayoutGrid, ChevronRight } from 'lucide-react';
+// PERBAIKAN: Menambahkan 'Shield' ke dalam import
+import { Search, Gift, ArrowRight, Clock, MapPin, LayoutGrid, ChevronRight, Shield } from 'lucide-react';
 import ulbiLogo from '../assets/ulbi-logo.png'; 
 import { fetchPosts } from '../services/api';
 
@@ -17,12 +18,16 @@ const LandingPage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Load Data
+  // Load Data & Filter
   useEffect(() => {
     const loadPosts = async () => {
       try {
         const data = await fetchPosts();
-        setItems(data.slice(0, 3)); 
+        
+        // Filter hanya yang statusnya 'aktif'
+        const activePosts = data.filter(post => post.status_postingan === 'aktif');
+        
+        setItems(activePosts.slice(0, 3)); // Ambil 3 teratas
       } catch (error) {
         console.error("Gagal load barang:", error);
       } finally {
@@ -37,14 +42,12 @@ const LandingPage = () => {
   };
 
   return (
-    // BACKGROUND: Diganti dari Putih ke Abu-abu Kebiruan Lembut (#F1F5F9 - Slate 100)
     <div className="min-h-screen bg-[#F1F5F9] font-sans text-slate-800 selection:bg-orange-200 selection:text-orange-900 overflow-x-hidden relative">
       
-      {/* Background Decor (Blob Abstrak untuk kedalaman) */}
+      {/* Background Decor */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] bg-blue-200/40 rounded-full blur-[120px] mix-blend-multiply"></div>
         <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-orange-100/60 rounded-full blur-[100px] mix-blend-multiply"></div>
-        {/* Pola titik-titik halus */}
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light"></div>
       </div>
 
@@ -56,7 +59,7 @@ const LandingPage = () => {
           {/* Logo Area */}
           <div className="flex items-center gap-3">
             <div className="bg-white p-2 rounded-xl shadow-md border border-white/50">
-               <img src={ulbiLogo} alt="ULBI" className="h-8 w-auto" />
+               <img src={ulbiLogo} alt="ULBI" className="h-8 w-auto" onError={(e) => e.target.style.display = 'none'} />
             </div>
             <div>
               <h1 className="text-xl font-extrabold tracking-wide leading-none text-[#0a1e3f]">ULBI</h1>
@@ -135,13 +138,12 @@ const LandingPage = () => {
       </div>
 
       {/* --- LIVE FEED SECTION --- */}
-      {/* Background Section dibedakan sedikit (Putih) agar kontras dengan Hero */}
       <div id="terbaru" className="relative z-10 py-24 px-6 bg-white/60 backdrop-blur-sm border-t border-white/40 shadow-[0_-20px_40px_-20px_rgba(0,0,0,0.05)]">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-end mb-16 opacity-0 animate-[fadeIn_1s_ease-out_0.8s_forwards]">
             <div>
               <h2 className="text-3xl font-bold text-[#0a1e3f] mb-2">Laporan Terkini</h2>
-              <p className="text-slate-500">Data pelaporan barang yang masuk secara real-time.</p>
+              <p className="text-slate-500">Data pelaporan barang aktif yang masuk secara real-time.</p>
             </div>
             <Link to="/login" className="hidden sm:flex items-center gap-2 text-blue-600 font-bold hover:text-blue-800 transition-all group">
               Lihat Semua <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -155,12 +157,11 @@ const LandingPage = () => {
           ) : items.length === 0 ? (
              <div className="text-center py-24 bg-white rounded-[2rem] border border-slate-100 shadow-sm">
                <Search size={48} className="mx-auto text-slate-300 mb-4"/>
-               <p className="text-slate-500">Belum ada data laporan saat ini.</p>
+               <p className="text-slate-500">Belum ada laporan aktif saat ini.</p>
              </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {items.map((item, index) => (
-                // CARD DESIGN: Glassy White
                 <div 
                   key={item.id_postingan} 
                   className="group relative bg-white border border-white/50 rounded-[2.5rem] overflow-hidden hover:border-blue-200 transition-all duration-500 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:-translate-y-2 opacity-0 animate-[fadeInUp_0.6s_ease-out_forwards]"
@@ -179,7 +180,7 @@ const LandingPage = () => {
                     
                     <div className="absolute top-4 right-4 z-20">
                       <span className="bg-white/90 backdrop-blur-md text-[#0a1e3f] text-[10px] font-bold px-3 py-1 rounded-full shadow-sm tracking-wider uppercase border border-white">
-                        {item.kategori || 'UMUM'}
+                        {item.master_kategori?.nama_kategori || 'UMUM'}
                       </span>
                     </div>
                     
@@ -202,14 +203,14 @@ const LandingPage = () => {
                       </div>
                       <div className="flex items-center gap-3 text-sm text-slate-500">
                         <Clock size={16} className="text-blue-500" /> 
-                        {formatDate(item.tgl_postingan)}
+                        {formatDate(item.created_at || item.tgl_postingan)}
                       </div>
                     </div>
                     
                     <div className="flex justify-between items-center pt-6 border-t border-slate-100">
                       <div className="flex items-center gap-2">
                         <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">
-                          {item.akun_pengguna?.nama_lengkap?.charAt(0) || 'U'}
+                          {item.akun_pengguna?.nama_lengkap?.charAt(0).toUpperCase() || 'U'}
                         </div>
                         <span className="text-xs font-bold text-slate-500 truncate max-w-[100px]">
                           {item.akun_pengguna?.nama_lengkap?.split(' ')[0] || 'User'}
@@ -241,8 +242,9 @@ const LandingPage = () => {
 
             {[
               { icon: <Search className="w-8 h-8 text-blue-600" />, title: "1. Pelaporan Cepat", desc: "Laporkan kehilangan atau penemuan dalam hitungan detik melalui dashboard terintegrasi." },
+              // PERBAIKAN: Shield digunakan di sini
               { icon: <Shield className="w-8 h-8 text-orange-500" />, title: "2. Validasi Data", desc: "Sistem akan memvalidasi kecocokan data. Keamanan terjamin dengan verifikasi akun kampus." },
-              { icon: <CheckCircle className="w-8 h-8 text-green-600" />, title: "3. Klaim Aman", desc: "Proses pengembalian barang dilakukan di titik aman kampus dengan bukti serah terima." }
+              { icon: <Gift className="w-8 h-8 text-green-600" />, title: "3. Klaim Aman", desc: "Proses pengembalian barang dilakukan di titik aman kampus dengan bukti serah terima." }
             ].map((step, idx) => (
               <div key={idx} className="bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2 group border border-slate-100">
                 <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 shadow-inner group-hover:scale-110 transition-transform mx-auto">
@@ -264,7 +266,7 @@ const LandingPage = () => {
           <div className="text-center md:text-left">
             <h4 className="font-bold text-lg tracking-wider mb-1 flex items-center gap-2 justify-center md:justify-start">
               <div className="bg-white p-2 rounded-xl shadow-md border border-white/50">
-               <img src={ulbiLogo} alt="ULBI" className="h-8 w-auto" />
+               <img src={ulbiLogo} alt="ULBI" className="h-8 w-auto" onError={(e) => e.target.style.display = 'none'} />
             </div> ULBI LOFO
             </h4>
             <p className="text-xs text-blue-200 opacity-80">Universitas Logistik & Bisnis Internasional</p>
@@ -275,7 +277,7 @@ const LandingPage = () => {
             <a href="#" className="hover:text-orange-400 transition-colors">Contact</a>
           </div>
           <div className="text-xs text-blue-300 opacity-60">
-            &copy; 2025 ULBI Lost & Found. By Ridwan & Syalwa.
+            &copy; 2025 ULBI Lost & Found.
           </div>
         </div>
       </footer>

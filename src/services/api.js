@@ -185,3 +185,11 @@ export const fetchPostDetail = async (idPostingan) => {
     method: 'GET',
   });
 };
+
+// [BARU] Update Status Postingan (Selesai/Aktif)
+export const updatePostStatus = async (idPostingan, statusBaru) => {
+  return fetchWithAuth(`/api/posts/${idPostingan}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status: statusBaru }),
+  });
+};
