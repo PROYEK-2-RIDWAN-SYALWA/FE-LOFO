@@ -11,6 +11,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import LaporBarang from './pages/LaporBarang';
 import Profile from './pages/Profile';
+import ForgotPassword from './pages/ForgotPassword';
+import UpdatePassword from './pages/UpdatePassword';
 
 // Admin Import
 import AdminLayout from './components/AdminLayout';
@@ -33,6 +35,10 @@ function App() {
             <Dashboard />
           </PrivateRoute>
         } />
+
+        {/* Route Publik untuk Reset Password */}
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/update-password" element={<UpdatePassword />} />
 
         <Route path="/post/:id" element={
           <PrivateRoute>
