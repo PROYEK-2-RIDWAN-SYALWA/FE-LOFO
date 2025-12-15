@@ -7,6 +7,7 @@ import {
   List, MessageSquare, Clock, MapPin, 
   ChevronRight, Shield, GraduationCap, School, Loader2, LayoutGrid, Gift, AlertTriangle
 } from 'lucide-react';
+import NotificationBell from '../components/NotificationBell';
 
 const Dashboard = () => {
   const { user, signOut } = useAuth(); 
@@ -171,12 +172,12 @@ const Dashboard = () => {
       <main className={`flex-1 bg-slate-50 min-h-screen transition-all duration-300 md:pl-28 ${isSidebarHovered ? 'md:ml-64' : 'md:ml-0'} pt-6 px-4 md:px-10 pb-28 md:pb-12 h-screen overflow-y-auto`}>
         
         {/* Header User Card */}
-        <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden animate-[fadeIn_0.6s_ease-out]">
+        <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative animate-[fadeIn_0.6s_ease-out]">
           <div className="absolute top-0 right-0 w-64 h-64 bg-orange-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50 pointer-events-none"></div>
           
           <div className="flex items-center gap-5 relative z-10">
             <div className="w-16 h-16 bg-[#0a1e3f] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/20">
-               {profile ? getRoleIcon(profile.role_name) : <User />}
+              {profile ? getRoleIcon(profile.role_name) : <User />}
             </div>
             <div>
               <h2 className="text-xl md:text-3xl font-black text-[#0a1e3f] tracking-tight">
@@ -190,9 +191,15 @@ const Dashboard = () => {
                   : `Selamat datang, ${getRoleLabel(profile?.role_name)}`}
               </p>
             </div>
+            <div className="md:hidden absolute top-0 right-0 p-4">
+                <NotificationBell />
+            </div>
           </div>
 
           <div className="flex w-full md:w-auto gap-3 relative z-10">
+            <div className="hidden md:block mr-4 relative">
+                <NotificationBell />
+            </div>
             <button onClick={() => navigate('/lapor', { state: { tipe: 'kehilangan' } })} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#0a1e3f] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg hover:bg-blue-900 transition-all active:scale-95">
               <AlertTriangle size={18} className="text-orange-500 group-hover:text-white transition-colors" /> Lapor Hilang
             </button>

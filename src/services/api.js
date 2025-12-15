@@ -193,3 +193,17 @@ export const updatePostStatus = async (idPostingan, statusBaru) => {
     body: JSON.stringify({ status: statusBaru }),
   });
 };
+
+// ==========================================
+// 6. NOTIFICATIONS (FITUR NOTIFIKASI)
+// ==========================================
+export const fetchNotifications = async () => {
+  return fetchWithAuth('/api/notifications');
+};
+
+// Mark Notification as Read
+export const markNotificationAsRead = async (id = 'all') => {
+  return fetchWithAuth(`/api/notifications/${id}/read`, {
+    method: 'PUT'
+  });
+};
