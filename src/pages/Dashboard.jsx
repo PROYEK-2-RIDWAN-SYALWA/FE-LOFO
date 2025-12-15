@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserProfile, fetchPosts, fetchMyPosts } from '../services/api';
+import { fetchUserProfile, fetchPosts, fetchMyPosts, deleteMyPost } from '../services/api';
 import { 
   LogOut, User, PlusCircle, Search, 
   List, MessageSquare, Clock, MapPin, 
-  ChevronRight, Shield, GraduationCap, School, Loader2, LayoutGrid, Gift, AlertTriangle
+  ChevronRight, Shield, GraduationCap, School, Loader2, LayoutGrid, Gift, AlertTriangle,
+  Pencil, Trash2
 } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 
@@ -32,7 +33,7 @@ const Dashboard = () => {
     }
   }, [user]);
 
-  // --- 2. DEBOUNCE SEARCH (Reset ke Page 1 saat ngetik) ---
+  // --- 2. DEBOUNCE SEARCH ---
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       setCurrentPage(1); 
@@ -42,31 +43,24 @@ const Dashboard = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm]);
 
-  // --- 3. FETCH DATA SAAT GANTI HALAMAN/TAB ---
+  // --- 3. FETCH DATA ---
   useEffect(() => {
     fetchData(currentPage, searchTerm);
   }, [currentPage, activeTab]); 
 
-  // --- FUNGSI FETCH DATA ---
   const fetchData = async (page, search) => {
     if (!user) return;
     setLoading(true);
     
     try {
       if (activeTab === 'jelajah') {
-        // Panggil API Backend (Pagination)
         const res = await fetchPosts(page, search);
-        
-        // Cek struktur respon dari backend
-        // Jika backend kirim { data: [...], pagination: {...} }
         const rawPosts = res.data || []; 
         const activePosts = rawPosts.filter(p => p.status_postingan === 'aktif');
-        
         setPosts(activePosts);
         setTotalPages(res.pagination ? res.pagination.total_pages : 1);
         
       } else {
-        // Logic "Milik Saya" (Load All & Filter Client-side)
         const myPosts = await fetchMyPosts();
         const filtered = myPosts.filter(p => 
            p.nama_barang.toLowerCase().includes(search.toLowerCase()) ||
@@ -77,13 +71,13 @@ const Dashboard = () => {
       }
     } catch (err) {
       console.error("Gagal load data:", err);
-      setPosts([]); // Set kosong jika error agar tidak crash
+      setPosts([]); 
     } finally {
       setLoading(false);
     }
   };
 
-  // HANDLERS
+  // --- HANDLERS ---
   const handleLogout = async () => {
     await signOut(); 
     navigate('/login');
@@ -91,6 +85,25 @@ const Dashboard = () => {
 
   const handleDetailClick = (id) => {
     navigate(`/post/${id}`);
+  };
+
+  const handleDeletePost = async (e, id) => {
+    e.stopPropagation(); 
+    if (!window.confirm("Apakah Anda yakin ingin menghapus postingan ini?")) return;
+
+    try {
+      await deleteMyPost(id);
+      setPosts(prev => prev.filter(p => p.id_postingan !== id));
+      alert("Postingan berhasil dihapus.");
+    } catch (error) {
+      console.error("Gagal hapus:", error);
+      alert("Gagal menghapus postingan.");
+    }
+  };
+
+  const handleEditPost = (e, post) => {
+    e.stopPropagation();
+    navigate('/lapor', { state: { editMode: true, postData: post } });
   };
 
   const formatDate = (dateString) => {
@@ -118,7 +131,7 @@ const Dashboard = () => {
   const NavButton = ({ icon, label, isActive, onClick }) => (
     <button 
       onClick={onClick}
-      className={`relative flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 w-full mb-1.5
+      className={`relative flex items-center gap-0 px-4 py-3.5 rounded-xl transition-all duration-300 w-full mb-1.5
         ${isActive 
           ? 'bg-orange-500 text-white shadow-lg shadow-orange-900/20' 
           : 'text-blue-200 hover:bg-white/10 hover:text-white'
@@ -148,7 +161,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-[#F1F5F9] flex font-sans overflow-hidden">
       
-      {/* === SIDEBAR (DESKTOP) === */}
+      {/* SIDEBAR */}
       <aside 
         onMouseEnter={() => setIsSidebarHovered(true)}
         onMouseLeave={() => setIsSidebarHovered(false)}
@@ -185,7 +198,7 @@ const Dashboard = () => {
         </button>
       </aside>
 
-      {/* === MOBILE NAV === */}
+      {/* MOBILE NAV */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-200 h-20 pb-2 flex items-center justify-around z-50 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)]">
         <MobileNavButton icon={<Search size={24}/>} label="Jelajah" isActive={activeTab === 'jelajah'} onClick={() => setActiveTab('jelajah')} />
         <MobileNavButton icon={<List size={24}/>} label="Riwayat" isActive={activeTab === 'saya'} onClick={() => setActiveTab('saya')} />
@@ -201,11 +214,8 @@ const Dashboard = () => {
         </button>
       </div>
 
-      {/* === MAIN CONTENT === */}
-      <main className={`flex-1 bg-slate-50 min-h-screen transition-all duration-300 
-        md:pl-28 ${isSidebarHovered ? 'md:ml-64' : 'md:ml-0'} 
-        pt-6 px-4 md:px-10 pb-28 md:pb-12 h-screen overflow-y-auto`}
-      >
+      {/* MAIN CONTENT */}
+      <main className={`flex-1 bg-slate-50 min-h-screen transition-all duration-300 md:pl-28 ${isSidebarHovered ? 'md:ml-64' : 'md:ml-0'} pt-6 px-4 md:px-10 pb-28 md:pb-12 h-screen overflow-y-auto`}>
         
         {/* Header User Card */}
         <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative animate-[fadeIn_0.6s_ease-out]">
@@ -227,8 +237,6 @@ const Dashboard = () => {
                   : `Selamat datang, ${getRoleLabel(profile?.role_name)}`}
               </p>
             </div>
-            
-            {/* Mobile Bell */}
             <div className="md:hidden absolute top-0 right-0 p-4">
                 <NotificationBell />
             </div>
@@ -249,7 +257,6 @@ const Dashboard = () => {
 
         {/* Tools Bar */}
         <div className="flex flex-col md:flex-row justify-between items-end gap-4 mb-12 animate-[fadeIn_0.8s_ease-out]">
-           
            <div className="w-full md:w-auto">
              <div className="flex items-center gap-4 mb-4">
                 <div className={`p-2.5 rounded-xl shadow-sm ${activeTab === 'jelajah' ? 'bg-blue-600 text-white' : 'bg-orange-500 text-white'}`}>
@@ -264,32 +271,14 @@ const Dashboard = () => {
                   </p>
                 </div>
              </div>
-
              <div className="inline-flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
-                <button 
-                  onClick={() => setActiveTab('jelajah')}
-                  className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'jelajah' ? 'bg-[#0a1e3f] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
-                >
-                  Semua
-                </button>
-                <button 
-                  onClick={() => setActiveTab('saya')}
-                  className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'saya' ? 'bg-[#0a1e3f] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
-                >
-                  Milik Saya
-                </button>
+                <button onClick={() => setActiveTab('jelajah')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'jelajah' ? 'bg-[#0a1e3f] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Semua</button>
+                <button onClick={() => setActiveTab('saya')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'saya' ? 'bg-[#0a1e3f] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Milik Saya</button>
              </div>
            </div>
-
            <div className="relative w-full md:w-80 group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="Cari nama barang..." 
-                className="w-full pl-12 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all text-sm font-medium"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+              <input type="text" placeholder="Cari nama barang..." className="w-full pl-12 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all text-sm font-medium" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
            </div>
         </div>
 
@@ -306,133 +295,95 @@ const Dashboard = () => {
           </div>
         ) : posts.length === 0 ? (
           <div className="bg-white border-2 border-dashed border-slate-200 rounded-[2rem] p-16 text-center flex flex-col items-center justify-center animate-[fadeInUp_0.5s_ease-out]">
-            <div className="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mb-6 text-slate-300">
-              <Search size={40} />
-            </div>
+            <div className="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mb-6 text-slate-300"><Search size={40} /></div>
             <h4 className="text-xl font-bold text-slate-700 mb-2">Tidak ada data ditemukan</h4>
-            <p className="text-slate-400 text-sm max-w-xs mx-auto">
-              Coba kata kunci lain atau pastikan ejaan barang yang Anda cari benar.
-            </p>
+            <p className="text-slate-400 text-sm max-w-xs mx-auto">Coba kata kunci lain atau pastikan ejaan barang yang Anda cari benar.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20">
-            {posts.map((item, index) => (
-              <div 
-                key={item.id_postingan} 
-                className="group bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1 animate-[fadeInUp_0.5s_ease-out_forwards] opacity-0"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div className="h-56 bg-slate-100 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a1e3f]/60 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  
-                  {item.foto_barang && item.foto_barang.length > 10 ? (
-                    <img src={item.foto_barang} alt={item.nama_barang} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 bg-slate-50">
-                      <LayoutGrid size={40} className="mb-2 opacity-50"/>
-                      <span className="text-xs font-medium">No Image</span>
-                    </div>
-                  )}
-                  
-                  <div className={`absolute top-4 left-4 px-3 py-1.5 rounded-xl text-[10px] font-black text-white uppercase tracking-wider shadow-lg flex items-center gap-1.5 backdrop-blur-md
-                    ${item.tipe_postingan === 'kehilangan' ? 'bg-red-500/90' : 'bg-emerald-500/90'}`}>
-                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
-                    {item.tipe_postingan}
-                  </div>
+            {posts.map((item, index) => {
+              // --- LOGIC BARU: PENENTUAN NAMA PELAPOR ---
+              // Jika data pelapor dari API ada (tab Jelajah), pakai itu.
+              // Jika tidak ada (tab Saya), pakai data profil login (fallback).
+              const pelaporNama = item.akun_pengguna?.nama_lengkap || profile?.nama_lengkap || 'User';
+              const pelaporInisial = pelaporNama.charAt(0).toUpperCase();
 
-                  {activeTab === 'saya' && (
-                     <div className={`absolute bottom-4 right-4 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white uppercase tracking-wider shadow-lg backdrop-blur-md z-20
-                      ${item.status_postingan === 'aktif' ? 'bg-blue-600/80' : 'bg-slate-800/80'}`}>
-                      {item.status_postingan}
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-6 flex flex-col flex-1">
-                  <div className="flex justify-between items-start mb-3">
-                    <span className="text-[10px] font-bold text-[#0a1e3f] uppercase tracking-wider bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">
-                      {item.master_kategori?.nama_kategori || 'UMUM'}
-                    </span>
-                    <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
-                      <Clock size={12} /> {formatDate(item.created_at)}
-                    </span>
-                  </div>
-                  
-                  <h4 className="text-lg font-bold text-slate-800 mb-2 line-clamp-1 group-hover:text-orange-600 transition-colors">
-                    {item.nama_barang}
-                  </h4>
-                  
-                  <div className="flex items-start gap-1.5 mb-4">
-                     <MapPin size={14} className="text-orange-500 mt-0.5 flex-shrink-0"/> 
-                     <span className="text-xs text-slate-500 font-medium line-clamp-1">{item.lokasi_terlapor}</span>
-                  </div>
-                  
-                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-6 flex-1">
-                    {item.deskripsi}
-                  </p>
-
-                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-[#0a1e3f] flex items-center justify-center text-[10px] font-bold text-white">
-                        {item.akun_pengguna?.nama_lengkap?.charAt(0).toUpperCase() || '?'}
+              return (
+                <div key={item.id_postingan} className="group bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1 animate-[fadeInUp_0.5s_ease-out_forwards] opacity-0" style={{ animationDelay: `${index * 0.1}s` }}>
+                  <div className="h-56 bg-slate-100 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0a1e3f]/60 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    {item.foto_barang && item.foto_barang.length > 10 ? (
+                      <img src={item.foto_barang} alt={item.nama_barang} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 bg-slate-50">
+                        <LayoutGrid size={40} className="mb-2 opacity-50"/>
+                        <span className="text-xs font-medium">No Image</span>
                       </div>
-                      <div className="flex flex-col">
-                         <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Pelapor</span>
-                         <span className="text-xs font-bold text-slate-700 truncate max-w-[80px]">
-                           {item.akun_pengguna?.nama_lengkap?.split(' ')[0]}
-                         </span>
-                      </div>
+                    )}
+                    <div className={`absolute top-4 left-4 px-3 py-1.5 rounded-xl text-[10px] font-black text-white uppercase tracking-wider shadow-lg flex items-center gap-1.5 backdrop-blur-md ${item.tipe_postingan === 'kehilangan' ? 'bg-red-500/90' : 'bg-emerald-500/90'}`}>
+                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                      {item.tipe_postingan}
                     </div>
-                    
-                    <button 
-                      onClick={() => handleDetailClick(item.id_postingan)}
-                      className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-[#0a1e3f] hover:text-white transition-all duration-300 shadow-sm hover:shadow-lg group/btn"
-                    >
-                      <ChevronRight size={18} className="group-hover/btn:translate-x-0.5 transition-transform" />
-                    </button>
+                    {activeTab === 'saya' && (
+                       <div className={`absolute bottom-4 right-4 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white uppercase tracking-wider shadow-lg backdrop-blur-md z-20 ${item.status_postingan === 'aktif' ? 'bg-blue-600/80' : 'bg-slate-800/80'}`}>
+                        {item.status_postingan}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-6 flex flex-col flex-1">
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="text-[10px] font-bold text-[#0a1e3f] uppercase tracking-wider bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">{item.master_kategori?.nama_kategori || 'UMUM'}</span>
+                      <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium"><Clock size={12} /> {formatDate(item.created_at || item.tgl_postingan)}</span>
+                    </div>
+                    <h4 className="text-lg font-bold text-slate-800 mb-2 line-clamp-1 group-hover:text-orange-600 transition-colors">{item.nama_barang}</h4>
+                    <div className="flex items-start gap-1.5 mb-4">
+                       <MapPin size={14} className="text-orange-500 mt-0.5 flex-shrink-0"/> 
+                       <span className="text-xs text-slate-500 font-medium line-clamp-1">{item.lokasi_terlapor}</span>
+                    </div>
+                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-6 flex-1">{item.deskripsi}</p>
+
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-[#0a1e3f] flex items-center justify-center text-[10px] font-bold text-white">
+                          {pelaporInisial}
+                        </div>
+                        <div className="flex flex-col">
+                           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Pelapor</span>
+                           <span className="text-xs font-bold text-slate-700 truncate max-w-[80px]">{pelaporNama.split(' ')[0]}</span>
+                        </div>
+                      </div>
+                      
+                      {activeTab === 'saya' ? (
+                        <div className="flex gap-2">
+                          <button onClick={(e) => handleEditPost(e, item)} className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Edit Postingan"><Pencil size={16} /></button>
+                          <button onClick={(e) => handleDeletePost(e, item.id_postingan)} className="w-9 h-9 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm" title="Hapus Postingan"><Trash2 size={16} /></button>
+                        </div>
+                      ) : (
+                        <button onClick={() => handleDetailClick(item.id_postingan)} className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-[#0a1e3f] hover:text-white transition-all duration-300 shadow-sm hover:shadow-lg group/btn">
+                          <ChevronRight size={18} className="group-hover/btn:translate-x-0.5 transition-transform" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        {/* --- PAGINATION CONTROLS --- */}
         {activeTab === 'jelajah' && totalPages > 1 && (
           <div className="flex justify-center items-center gap-4 mt-8 pb-10 animate-[fadeIn_0.5s_ease-out]">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              className="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-all shadow-sm"
-            >
-              ← Sebelumnya
-            </button>
-            
-            <span className="text-sm font-bold text-[#0a1e3f]">
-              Halaman {currentPage} dari {totalPages}
-            </span>
-
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              className="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-all shadow-sm"
-            >
-              Selanjutnya →
-            </button>
+            <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} className="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-all shadow-sm">← Sebelumnya</button>
+            <span className="text-sm font-bold text-[#0a1e3f]">Halaman {currentPage} dari {totalPages}</span>
+            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} className="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-all shadow-sm">Selanjutnya →</button>
           </div>
         )}
-
       </main>
 
       <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
   );

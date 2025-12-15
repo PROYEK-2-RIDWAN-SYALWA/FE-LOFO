@@ -209,3 +209,22 @@ export const markNotificationAsRead = async (id = 'all') => {
     method: 'PUT'
   });
 };
+
+
+// ==========================================
+// 7. USER POST MANAGEMENT
+// ========================================
+// [BARU] User Hapus Postingan Sendiri
+export const deleteMyPost = async (idPostingan) => {
+  return fetchWithAuth(`/api/posts/${idPostingan}`, {
+    method: 'DELETE',
+  });
+};
+
+// [BARU] User Edit Postingan Sendiri
+export const updateMyPost = async (idPostingan, formData) => {
+  return fetchWithAuth(`/api/posts/${idPostingan}`, {
+    method: 'PUT',
+    body: JSON.stringify(formData),
+  });
+};

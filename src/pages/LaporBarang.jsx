@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; 
-import { createPost, fetchCategories } from '../services/api';
+import { createPost, fetchCategories, updateMyPost } from '../services/api'; // Pastikan updateMyPost diimport
 import { supabase } from '../services/supabaseClient'; 
 import { 
   ArrowLeft, UploadCloud, MapPin, Calendar, FileText, 
-  HelpCircle, Camera, Loader2, X, AlertTriangle, CheckCircle2, Info
+  HelpCircle, Camera, Loader2, X, AlertTriangle, CheckCircle2, Info, Pencil
 } from 'lucide-react';
 
 const LaporBarang = () => {
@@ -13,7 +13,9 @@ const LaporBarang = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // Default tipe dari navigasi sebelumnya, atau default 'kehilangan'
+  // Cek apakah ini mode Edit atau Baru
+  const isEditMode = state?.editMode || false;
+  const postData = state?.postData || null;
   const defaultTipe = state?.tipe || 'kehilangan';
   
   // State Form
@@ -33,18 +35,42 @@ const LaporBarang = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // 1. Load Kategori
+  // 1. Load Data Awal (Kategori & Data Post jika Edit)
   useEffect(() => {
-    const loadData = async () => {
+    const loadInitData = async () => {
       try {
-        const data = await fetchCategories();
-        setKategoriList(data);
+        // Load Kategori
+        const categories = await fetchCategories();
+        setKategoriList(categories);
+
+        // Jika Edit Mode, isi form dengan data lama
+        if (isEditMode && postData) {
+          // Format tanggal agar sesuai input datetime-local (YYYY-MM-DDTHH:MM)
+          let formattedDate = '';
+          if (postData.created_at || postData.tgl_postingan) {
+            const d = new Date(postData.created_at || postData.tgl_postingan);
+            // Menggeser waktu ke zona lokal Indonesia (WIB) secara manual sederhana
+            // Atau biarkan browser handle conversion
+            formattedDate = d.toISOString().slice(0, 16); 
+          }
+
+          setForm({
+            nama_barang: postData.nama_barang,
+            id_kategori: postData.id_kategori, // Pastikan tipe data sama (integer)
+            deskripsi: postData.deskripsi,
+            lokasi: postData.lokasi_terlapor,
+            waktu_kejadian: formattedDate,
+            pertanyaan_keamanan: postData.pertanyaan_keamanan || '',
+            foto_barang: postData.foto_barang,
+            tipe_postingan: postData.tipe_postingan
+          });
+        }
       } catch (err) {
-        console.error("Gagal load kategori", err);
+        console.error("Gagal load data awal", err);
       }
     };
-    loadData();
-  }, []);
+    loadInitData();
+  }, [isEditMode, postData]);
 
   // 2. Handle File Upload
   const handleFileChange = async (e) => {
@@ -81,11 +107,11 @@ const LaporBarang = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.id_kategori) return alert('Harap pilih kategori barang!');
-    if (!confirm('Apakah data yang Anda masukkan sudah benar?')) return;
+    if (!confirm(isEditMode ? 'Simpan perubahan data ini?' : 'Apakah data yang Anda masukkan sudah benar?')) return;
 
     setLoading(true);
     try {
-      await createPost({
+      const payload = {
         tipe_postingan: form.tipe_postingan,
         nama_barang: form.nama_barang,
         id_kategori: parseInt(form.id_kategori),
@@ -94,9 +120,18 @@ const LaporBarang = () => {
         waktu_kejadian: form.waktu_kejadian || new Date().toISOString(), 
         foto_barang: form.foto_barang,
         ...(form.tipe_postingan === 'ditemukan' && { pertanyaan_keamanan: form.pertanyaan_keamanan })
-      });
+      };
+
+      if (isEditMode) {
+        // Panggil API Update
+        await updateMyPost(postData.id_postingan, payload);
+        alert('Laporan berhasil diperbarui!');
+      } else {
+        // Panggil API Create
+        await createPost(payload);
+        alert('Laporan berhasil dipublikasikan!');
+      }
       
-      alert('Laporan berhasil dipublikasikan!');
       navigate('/dashboard');
     } catch (error) {
       alert('Gagal: ' + error.message);
@@ -127,10 +162,12 @@ const LaporBarang = () => {
           <div className="flex flex-col md:flex-row justify-between items-end gap-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-extrabold text-white mb-2 tracking-tight">
-                Buat Laporan <span className="text-[#f97316]">Baru</span>
+                {isEditMode ? 'Edit Laporan' : 'Buat Laporan'} <span className="text-[#f97316]">{isEditMode ? 'Anda' : 'Baru'}</span>
               </h1>
               <p className="text-blue-100 text-lg max-w-2xl font-light">
-                Isi formulir di bawah ini dengan detail yang akurat untuk membantu proses pencarian atau pengembalian barang.
+                {isEditMode 
+                  ? 'Perbarui informasi laporan Anda agar lebih akurat.' 
+                  : 'Isi formulir di bawah ini dengan detail yang akurat untuk membantu proses pencarian atau pengembalian barang.'}
               </p>
             </div>
             {/* Info User Singkat */}
@@ -296,10 +333,10 @@ const LaporBarang = () => {
               
               <div className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-300 relative group overflow-hidden
                 ${form.foto_barang 
-                    ? 'border-green-400 bg-green-50/20' 
-                    : isLost 
-                        ? 'border-slate-300 hover:border-orange-400 hover:bg-orange-50/20' 
-                        : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50/20'}`}>
+                  ? 'border-green-400 bg-green-50/20' 
+                  : isLost 
+                      ? 'border-slate-300 hover:border-orange-400 hover:bg-orange-50/20' 
+                      : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50/20'}`}>
                 
                 <input 
                   type="file" accept="image/*" onChange={handleFileChange} disabled={uploading}
@@ -362,6 +399,8 @@ const LaporBarang = () => {
             >
               {loading ? (
                 <><Loader2 className="animate-spin" /> Memproses...</>
+              ) : isEditMode ? (
+                <><Pencil size={20} /> SIMPAN PERUBAHAN</>
               ) : (
                 isLost ? <>PUBLIKASIKAN KEHILANGAN <ArrowLeft className="rotate-180" size={20}/></> : <>PUBLIKASIKAN TEMUAN <CheckCircle2 size={20}/></>
               )}
