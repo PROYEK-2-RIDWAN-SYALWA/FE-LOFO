@@ -1,13 +1,13 @@
-// File: src/services/api.js
-
-// Ganti URL ini jika backend Anda sudah dideploy atau port-nya beda
-const API_BASE_URL = 'http://localhost:3000';
+// --- KONFIGURASI UTAMA ---
+const API_BASE_URL = 'http://localhost:3000'; 
 
 /**
- * HELPER: Mengambil Token JWT dari LocalStorage Supabase
+ * HELPER: Mengambil Token JWT dari LocalStorage
+ * (Token ini didapat saat login via Backend)
  */
 const getAuthToken = () => {
-  // Cari key localStorage yang formatnya 'sb-<project-id>-auth-token'
+  // Cari key di localStorage yang menyimpan token session supabase
+  // Biasanya format default auth-js supabase adalah: sb-<project-id>-auth-token
   const storageKey = Object.keys(localStorage).find(key => 
     key.startsWith('sb-') && key.endsWith('-auth-token')
   );
@@ -56,7 +56,7 @@ const fetchWithAuth = async (endpoint, options = {}) => {
 };
 
 // ==========================================
-// 1. AUTHENTICATION (Login & Register)
+// 1. AUTHENTICATION
 // ==========================================
 
 export const loginUser = async (credentials) => {
@@ -88,7 +88,7 @@ export const registerUser = async (userData) => {
 };
 
 // ==========================================
-// 2. MASTER DATA (Kategori, Prodi, dll)
+// 2. MASTER DATA
 // ==========================================
 
 export const fetchCategories = async () => {
@@ -104,17 +104,27 @@ export const fetchProdiList = async () => {
 };
 
 // ==========================================
-// 3. POSTINGAN (Laporan Kehilangan/Temuan)
+// 3. POSTINGAN (CORE FEATURE)
 // ==========================================
 
-// Ambil Semua Postingan (PUBLIK)
-export const fetchPosts = async () => {
-  const response = await fetch(`${API_BASE_URL}/api/posts`);
-  if (!response.ok) throw new Error('Gagal mengambil data postingan');
-  return response.json();
+// Update fungsi fetchPosts
+export const fetchPosts = async (page = 1, search = '', category = '') => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: '10', 
+    search: search,
+    category: category // Kirim kategori ke backend
+  });
+
+  const response = await fetch(`${API_BASE_URL}/api/posts?${params.toString()}`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) throw new Error('Gagal mengambil postingan');
+  return response.json(); 
 };
 
-// Buat Postingan Baru (PROTECTED)
 export const createPost = async (postData) => {
   return fetchWithAuth('/api/posts', {
     method: 'POST',
@@ -122,28 +132,36 @@ export const createPost = async (postData) => {
   });
 };
 
-// Ambil History Postingan Saya (PROTECTED)
 export const fetchMyPosts = async () => {
   return fetchWithAuth('/api/posts/history', {
     method: 'GET',
   });
 };
 
+export const fetchPostDetail = async (idPostingan) => {
+  return fetchWithAuth(`/api/posts/${idPostingan}`, {
+    method: 'GET',
+  });
+};
+
+export const updatePostStatus = async (idPostingan, statusBaru) => {
+  return fetchWithAuth(`/api/posts/${idPostingan}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status: statusBaru }),
+  });
+};
+
 // ==========================================
-// 4. USER PROFILE (INI YANG TADI HILANG)
+// 4. USER PROFILE
 // ==========================================
 
-// Ambil Profil User
 export const fetchUserProfile = async (authId) => {
-  // Backend userController.getProfile membutuhkan query param ?authId=...
   return fetchWithAuth(`/api/users/profile?authId=${authId}`, {
     method: 'GET',
   });
 };
 
-// Update Profil User
 export const updateUserProfile = async (authId, payload) => {
-  // Backend userController.updateProfile mengharapkan payload di body
   return fetchWithAuth(`/api/users/profile`, {
     method: 'PUT',
     body: JSON.stringify(payload),
@@ -151,7 +169,7 @@ export const updateUserProfile = async (authId, payload) => {
 };
 
 // ==========================================
-// 5. ADMIN PANEL (FITUR ADMIN)
+// 5. ADMIN PANEL
 // ==========================================
 
 export const fetchAdminStats = async () => {
@@ -178,30 +196,14 @@ export const deletePostByAdmin = async (idPostingan) => {
   });
 };
 
-// [BARU] Ambil Detail Postingan by ID
-export const fetchPostDetail = async (idPostingan) => {
-  // Panggil endpoint GET /api/posts/:id
-  return fetchWithAuth(`/api/posts/${idPostingan}`, {
-    method: 'GET',
-  });
-};
-
-// [BARU] Update Status Postingan (Selesai/Aktif)
-export const updatePostStatus = async (idPostingan, statusBaru) => {
-  return fetchWithAuth(`/api/posts/${idPostingan}/status`, {
-    method: 'PUT',
-    body: JSON.stringify({ status: statusBaru }),
-  });
-};
-
 // ==========================================
-// 6. NOTIFICATIONS (FITUR NOTIFIKASI)
+// 6. NOTIFICATIONS
 // ==========================================
+
 export const fetchNotifications = async () => {
   return fetchWithAuth('/api/notifications');
 };
 
-// Mark Notification as Read
 export const markNotificationAsRead = async (id = 'all') => {
   return fetchWithAuth(`/api/notifications/${id}/read`, {
     method: 'PUT'

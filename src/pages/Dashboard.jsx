@@ -13,40 +13,77 @@ const Dashboard = () => {
   const { user, signOut } = useAuth(); 
   const navigate = useNavigate();
   
+  // STATE
   const [profile, setProfile] = useState(null);
   const [activeTab, setActiveTab] = useState('jelajah');
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  
+  // PAGINATION & SEARCH STATE
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
+  // --- 1. LOAD PROFIL ---
   useEffect(() => {
-    const initData = async () => {
-      if (user) {
-        setLoading(true);
-        try {
-          const userRes = await fetchUserProfile(user.id);
-          setProfile(userRes); 
-          
-          let postsData = [];
-          if (activeTab === 'jelajah') {
-            const allPosts = await fetchPosts();
-            postsData = allPosts.filter(p => p.status_postingan === 'aktif');
-          } else {
-            postsData = await fetchMyPosts();
-          }
-          setPosts(postsData);
+    if (user) {
+      fetchUserProfile(user.id).then(setProfile).catch(console.error);
+    }
+  }, [user]);
 
-        } catch (err) {
-          console.error("Gagal load data:", err);
-        } finally {
-          setLoading(false);
-        }
+  // --- 2. DEBOUNCE SEARCH (Reset ke Page 1 saat ngetik) ---
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      setCurrentPage(1); 
+      fetchData(1, searchTerm);
+    }, 800); 
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
+
+  // --- 3. FETCH DATA SAAT GANTI HALAMAN/TAB ---
+  useEffect(() => {
+    fetchData(currentPage, searchTerm);
+  }, [currentPage, activeTab]); 
+
+  // --- FUNGSI FETCH DATA ---
+  const fetchData = async (page, search) => {
+    if (!user) return;
+    setLoading(true);
+    
+    try {
+      if (activeTab === 'jelajah') {
+        // Panggil API Backend (Pagination)
+        const res = await fetchPosts(page, search);
+        
+        // Cek struktur respon dari backend
+        // Jika backend kirim { data: [...], pagination: {...} }
+        const rawPosts = res.data || []; 
+        const activePosts = rawPosts.filter(p => p.status_postingan === 'aktif');
+        
+        setPosts(activePosts);
+        setTotalPages(res.pagination ? res.pagination.total_pages : 1);
+        
+      } else {
+        // Logic "Milik Saya" (Load All & Filter Client-side)
+        const myPosts = await fetchMyPosts();
+        const filtered = myPosts.filter(p => 
+           p.nama_barang.toLowerCase().includes(search.toLowerCase()) ||
+           p.deskripsi.toLowerCase().includes(search.toLowerCase())
+        );
+        setPosts(filtered);
+        setTotalPages(1); 
       }
-    };
-    initData();
-  }, [user, activeTab]);
+    } catch (err) {
+      console.error("Gagal load data:", err);
+      setPosts([]); // Set kosong jika error agar tidak crash
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // HANDLERS
   const handleLogout = async () => {
     await signOut(); 
     navigate('/login');
@@ -63,13 +100,6 @@ const Dashboard = () => {
     });
   };
 
-  const getRoleLabel = (role) => {
-    const r = role ? role.toLowerCase() : 'mahasiswa';
-    if (r === 'dosen') return 'Dosen';
-    if (r === 'satpam') return 'Satpam';
-    return 'Mahasiswa';
-  };
-
   const getRoleIcon = (role) => {
     const r = role ? role.toLowerCase() : 'mahasiswa';
     if (r === 'dosen') return <GraduationCap size={20} />;
@@ -77,15 +107,18 @@ const Dashboard = () => {
     return <School size={20} />;
   };
 
-  const filteredPosts = posts.filter(post => 
-    post.nama_barang.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    post.deskripsi.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const getRoleLabel = (role) => {
+    const r = role ? role.toLowerCase() : 'mahasiswa';
+    if (r === 'dosen') return 'Dosen';
+    if (r === 'satpam') return 'Satpam';
+    return 'Mahasiswa';
+  };
 
+  // COMPONENTS
   const NavButton = ({ icon, label, isActive, onClick }) => (
     <button 
       onClick={onClick}
-      className={`relative flex items-center gap-1 px-4 py-3.5 rounded-xl transition-all duration-300 w-full mb-1.5
+      className={`relative flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 w-full mb-1.5
         ${isActive 
           ? 'bg-orange-500 text-white shadow-lg shadow-orange-900/20' 
           : 'text-blue-200 hover:bg-white/10 hover:text-white'
@@ -115,7 +148,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-[#F1F5F9] flex font-sans overflow-hidden">
       
-      {/* SIDEBAR */}
+      {/* === SIDEBAR (DESKTOP) === */}
       <aside 
         onMouseEnter={() => setIsSidebarHovered(true)}
         onMouseLeave={() => setIsSidebarHovered(false)}
@@ -152,7 +185,7 @@ const Dashboard = () => {
         </button>
       </aside>
 
-      {/* MOBILE NAV */}
+      {/* === MOBILE NAV === */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-200 h-20 pb-2 flex items-center justify-around z-50 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)]">
         <MobileNavButton icon={<Search size={24}/>} label="Jelajah" isActive={activeTab === 'jelajah'} onClick={() => setActiveTab('jelajah')} />
         <MobileNavButton icon={<List size={24}/>} label="Riwayat" isActive={activeTab === 'saya'} onClick={() => setActiveTab('saya')} />
@@ -168,18 +201,21 @@ const Dashboard = () => {
         </button>
       </div>
 
-      {/* MAIN CONTENT */}
-      <main className={`flex-1 bg-slate-50 min-h-screen transition-all duration-300 md:pl-28 ${isSidebarHovered ? 'md:ml-64' : 'md:ml-0'} pt-6 px-4 md:px-10 pb-28 md:pb-12 h-screen overflow-y-auto`}>
+      {/* === MAIN CONTENT === */}
+      <main className={`flex-1 bg-slate-50 min-h-screen transition-all duration-300 
+        md:pl-28 ${isSidebarHovered ? 'md:ml-64' : 'md:ml-0'} 
+        pt-6 px-4 md:px-10 pb-28 md:pb-12 h-screen overflow-y-auto`}
+      >
         
         {/* Header User Card */}
         <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative animate-[fadeIn_0.6s_ease-out]">
           <div className="absolute top-0 right-0 w-64 h-64 bg-orange-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50 pointer-events-none"></div>
           
-          <div className="flex items-center gap-5 relative z-10">
+          <div className="flex items-center gap-5 relative z-10 w-full md:w-auto">
             <div className="w-16 h-16 bg-[#0a1e3f] text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/20">
-              {profile ? getRoleIcon(profile.role_name) : <User />}
+               {profile ? getRoleIcon(profile.role_name) : <User />}
             </div>
-            <div>
+            <div className="flex-1">
               <h2 className="text-xl md:text-3xl font-black text-[#0a1e3f] tracking-tight">
                 Halo, <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-orange-400">
                   {profile?.nama_lengkap ? profile.nama_lengkap.split(' ')[0] : 'User'}!
@@ -191,12 +227,14 @@ const Dashboard = () => {
                   : `Selamat datang, ${getRoleLabel(profile?.role_name)}`}
               </p>
             </div>
+            
+            {/* Mobile Bell */}
             <div className="md:hidden absolute top-0 right-0 p-4">
                 <NotificationBell />
             </div>
           </div>
 
-          <div className="flex w-full md:w-auto gap-3 relative z-10">
+          <div className="flex w-full md:w-auto gap-3 relative z-10 items-center">
             <div className="hidden md:block mr-4 relative">
                 <NotificationBell />
             </div>
@@ -209,10 +247,9 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* --- MODIFIKASI: Tools Bar (Jarak Lebih Lega & Tab Lebih Kecil) --- */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12 animate-[fadeIn_0.8s_ease-out]">
+        {/* Tools Bar */}
+        <div className="flex flex-col md:flex-row justify-between items-end gap-4 mb-12 animate-[fadeIn_0.8s_ease-out]">
            
-           {/* Bagian Kiri: Judul & Tab Switcher */}
            <div className="w-full md:w-auto">
              <div className="flex items-center gap-4 mb-4">
                 <div className={`p-2.5 rounded-xl shadow-sm ${activeTab === 'jelajah' ? 'bg-blue-600 text-white' : 'bg-orange-500 text-white'}`}>
@@ -228,7 +265,6 @@ const Dashboard = () => {
                 </div>
              </div>
 
-             {/* Tab Switcher (Ukuran Compact & Rounded Halus) */}
              <div className="inline-flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
                 <button 
                   onClick={() => setActiveTab('jelajah')}
@@ -245,7 +281,6 @@ const Dashboard = () => {
              </div>
            </div>
 
-           {/* Bagian Kanan: Search Input */}
            <div className="relative w-full md:w-80 group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
@@ -269,7 +304,7 @@ const Dashboard = () => {
               </div>
             ))}
           </div>
-        ) : filteredPosts.length === 0 ? (
+        ) : posts.length === 0 ? (
           <div className="bg-white border-2 border-dashed border-slate-200 rounded-[2rem] p-16 text-center flex flex-col items-center justify-center animate-[fadeInUp_0.5s_ease-out]">
             <div className="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mb-6 text-slate-300">
               <Search size={40} />
@@ -281,7 +316,7 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20">
-            {filteredPosts.map((item, index) => (
+            {posts.map((item, index) => (
               <div 
                 key={item.id_postingan} 
                 className="group bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1 animate-[fadeInUp_0.5s_ease-out_forwards] opacity-0"
@@ -361,6 +396,32 @@ const Dashboard = () => {
             ))}
           </div>
         )}
+
+        {/* --- PAGINATION CONTROLS --- */}
+        {activeTab === 'jelajah' && totalPages > 1 && (
+          <div className="flex justify-center items-center gap-4 mt-8 pb-10 animate-[fadeIn_0.5s_ease-out]">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              className="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-all shadow-sm"
+            >
+              ← Sebelumnya
+            </button>
+            
+            <span className="text-sm font-bold text-[#0a1e3f]">
+              Halaman {currentPage} dari {totalPages}
+            </span>
+
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              className="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-all shadow-sm"
+            >
+              Selanjutnya →
+            </button>
+          </div>
+        )}
+
       </main>
 
       <style>{`

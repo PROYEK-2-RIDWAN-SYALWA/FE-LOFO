@@ -18,19 +18,30 @@ const LandingPage = () => {
   }, []);
 
   // Load Data
-  useEffect(() => {
+useEffect(() => {
     const loadPosts = async () => {
       try {
-        const data = await fetchPosts();
-        // Filter hanya yang aktif
-        const activePosts = data.filter(post => post.status_postingan === 'aktif');
-        setItems(activePosts.slice(0, 3)); 
+        // 1. Ambil data (format baru: { data, pagination })
+        const response = await fetchPosts(1, ''); // Page 1, tanpa search
+        
+        // 2. Ambil array dari properti '.data'
+        const rawPosts = response.data || []; 
+
+        // 3. Filter postingan aktif & urutkan (ambil 6 teratas)
+        const activePosts = rawPosts
+          .filter(post => post.status_postingan === 'aktif')
+          .slice(0, 6);
+
+        // PERBAIKAN DI SINI: Gunakan 'setItems', bukan 'setPosts'
+        setItems(activePosts);
+        
       } catch (error) {
         console.error("Gagal load barang:", error);
       } finally {
         setLoading(false);
       }
     };
+
     loadPosts();
   }, []);
 
