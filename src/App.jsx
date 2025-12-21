@@ -19,6 +19,8 @@ import AdminLayout from './components/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminPosts from './pages/admin/AdminPosts';
+import AdminCategories from './pages/admin/AdminCategories';
+import AdminProdi from './pages/admin/AdminProdi';
 
 function App() {
   return (
@@ -75,6 +77,12 @@ function App() {
           
           {/* Halaman Moderasi Laporan */}
           <Route path="posts" element={<AdminPosts />} />
+          
+          {/* Halaman Kelola Kategori */}
+          <Route path="categories" element={<AdminCategories />} />
+          
+          {/* Halaman Kelola Prodi */}
+          <Route path="prodi" element={<AdminProdi />} />
         </Route>
         
         {/* === FALLBACK ROUTE === */}
