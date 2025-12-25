@@ -361,6 +361,11 @@ export const rejectClaim = async (idKlaim, alasan) => {
   });
 };
 
+// Ambil riwayat klaim yang berhasil (SELESAI)
+export const fetchSuccessfulClaims = async () => {
+  return fetchWithAuth('/api/claims/my-successful');
+};
+
 // ==========================================
 // 10. STORAGE & UTILS (BARU)
 // ==========================================

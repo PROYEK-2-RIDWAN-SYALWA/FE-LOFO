@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserProfile, fetchPosts, fetchMyPosts, deleteMyPost, getStorageUrl } from '../services/api';
+import { fetchUserProfile, fetchPosts, fetchMyPosts, deleteMyPost, getStorageUrl, fetchSuccessfulClaims } from '../services/api';
 import {
   LogOut, User, PlusCircle, Search,
   List, MessageSquare, Clock, MapPin,
   ChevronRight, Shield, GraduationCap, School, Loader2, LayoutGrid, Gift, AlertTriangle,
-  Pencil, Trash2
+  Pencil, Trash2, Package
 } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import VerificationBadge from '../components/VerificationBadge';
@@ -60,6 +60,12 @@ const Dashboard = () => {
         const activePosts = rawPosts.filter(p => p.status_postingan === 'aktif');
         setPosts(activePosts);
         setTotalPages(res.pagination ? res.pagination.total_pages : 1);
+
+      } else if (activeTab === 'klaim') {
+        // [BARU] Load Data Klaim Sukses
+        const claims = await fetchSuccessfulClaims();
+        setPosts(claims || []);
+        setTotalPages(1);
 
       } else {
         const myPosts = await fetchMyPosts();
@@ -128,6 +134,171 @@ const Dashboard = () => {
     return 'Mahasiswa';
   };
 
+
+
+  const renderCardContent = (item) => {
+    // 1. DATA CLAIM (Untuk Tab 'klaim')
+    if (activeTab === 'klaim') {
+      const post = item.postingan_barang; // Data postingan ada di dalam objek ini
+
+      // GUARD CLAUSE: Jika data postingan tidak ada (misal terhapus), jangan render error
+      if (!post) return null;
+
+      const pelaporNama = post.akun_pengguna?.nama_lengkap || 'User';
+      const pelaporInisial = pelaporNama.charAt(0).toUpperCase();
+
+      return (
+        <div key={item.id_klaim} className="group bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1 animate-[fadeInUp_0.5s_ease-out_forwards]">
+          {/* Image Section */}
+          <div className="h-56 bg-slate-100 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0a1e3f]/60 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            {post.foto_barang && post.foto_barang.length > 10 ? (
+              <img src={getStorageUrl(post.foto_barang)} alt={post.nama_barang} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 bg-slate-50">
+                <LayoutGrid size={40} className="mb-2 opacity-50" />
+                <span className="text-xs font-medium">No Image</span>
+              </div>
+            )}
+
+            {/* Status Badge: SELALU SELESAI UNTUK RIWAYAT KLAIM SUKSES */}
+            <div className="absolute top-4 right-4 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white uppercase tracking-wider shadow-lg backdrop-blur-md z-20 bg-green-500">
+              SELESAI
+            </div>
+          </div>
+
+          {/* Content Section */}
+          <div className="p-6 flex flex-col flex-1">
+            <div className="flex justify-between items-start mb-3">
+              <span className="text-[10px] font-bold text-[#0a1e3f] uppercase tracking-wider bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">BARANG KLAIM</span>
+              <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium"><Clock size={12} /> Disetujui: {formatDate(item.tgl_validasi)}</span>
+            </div>
+            <h4 className="text-lg font-bold text-slate-800 mb-2 line-clamp-1 group-hover:text-orange-600 transition-colors">{post.nama_barang}</h4>
+
+            {/* Penemu Info */}
+            <div className="bg-slate-50 rounded-xl p-3 mb-4 border border-slate-100">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Ditemukan Oleh</p>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-[#0a1e3f] flex items-center justify-center text-[10px] font-bold text-white overflow-hidden">
+                  {pelaporInisial}
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-bold text-slate-700 truncate max-w-[80px]">{pelaporNama.split(' ')[0]}</span>
+                    <VerificationBadge status={post.akun_pengguna?.status_akun} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
+              <button onClick={() => window.open(`https://wa.me/${post.akun_pengguna.no_wa}`, '_blank')} className="px-4 py-2 bg-green-500 text-white rounded-lg text-xs font-bold hover:bg-green-600 transition shadow-sm w-full flex justify-center items-center gap-2">
+                <MessageSquare size={14} /> Hubungi Penemu
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 2. DATA POSTINGAN BIASA (Untuk Tab 'jelajah' & 'saya')
+    const pelaporNama = item.akun_pengguna?.nama_lengkap || profile?.nama_lengkap || 'User';
+    const pelaporInisial = pelaporNama.charAt(0).toUpperCase();
+
+    return (
+      <div key={item.id_postingan} className="group bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1 animate-[fadeInUp_0.5s_ease-out_forwards]">
+        {/* Image Section */}
+        <div className="h-56 bg-slate-100 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0a1e3f]/60 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          {item.foto_barang && item.foto_barang.length > 10 ? (
+            <img src={getStorageUrl(item.foto_barang)} alt={item.nama_barang} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 bg-slate-50">
+              <LayoutGrid size={40} className="mb-2 opacity-50" />
+              <span className="text-xs font-medium">No Image</span>
+            </div>
+          )}
+          <div className={`absolute top-4 left-4 px-3 py-1.5 rounded-xl text-[10px] font-black text-white uppercase tracking-wider shadow-lg flex items-center gap-1.5 backdrop-blur-md ${item.tipe_postingan === 'kehilangan' ? 'bg-red-500/90' : 'bg-emerald-500/90'}`}>
+            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+            {item.tipe_postingan}
+          </div>
+          {activeTab === 'saya' && (
+            <div className={`absolute bottom-4 right-4 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white uppercase tracking-wider shadow-lg backdrop-blur-md z-20 ${item.status_postingan === 'aktif' ? 'bg-blue-600/80' : 'bg-slate-800/80'}`}>
+              {item.status_postingan}
+            </div>
+          )}
+        </div>
+
+        {/* Content Section */}
+        <div className="p-6 flex flex-col flex-1">
+          <div className="flex justify-between items-start mb-3">
+            <span className="text-[10px] font-bold text-[#0a1e3f] uppercase tracking-wider bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">{item.master_kategori?.nama_kategori || 'UMUM'}</span>
+            <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium"><Clock size={12} /> {formatDate(item.created_at || item.tgl_postingan)}</span>
+          </div>
+          <h4 className="text-lg font-bold text-slate-800 mb-2 line-clamp-1 group-hover:text-orange-600 transition-colors">{item.nama_barang}</h4>
+          <div className="flex items-start gap-1.5 mb-4">
+            <MapPin size={14} className="text-orange-500 mt-0.5 flex-shrink-0" />
+            <span className="text-xs text-slate-500 font-medium line-clamp-1">{item.lokasi_terlapor}</span>
+          </div>
+          <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-6 flex-1">{item.deskripsi}</p>
+
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-[#0a1e3f] flex items-center justify-center text-[10px] font-bold text-white overflow-hidden">
+                {item.akun_pengguna?.foto_profil ? (
+                  <img
+                    src={getStorageUrl(item.akun_pengguna.foto_profil)}
+                    alt="Pelapor"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  pelaporInisial
+                )}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Pelapor</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs font-bold text-slate-700 truncate max-w-[80px]">{pelaporNama.split(' ')[0]}</span>
+                  <VerificationBadge status={item.akun_pengguna?.status_akun} />
+                </div>
+              </div>
+            </div>
+
+            {activeTab === 'saya' ? (
+              item.status_postingan === 'aktif' || item.status_postingan === 'ditolak_admin' || item.status_postingan === 'pending_admin' ? (
+                <div className="flex gap-2">
+                  {/* Tombol Edit hanya untuk AKTIF dan PENDING */}
+                  {item.status_postingan !== 'ditolak_admin' && (
+                    <button onClick={(e) => handleEditPost(e, item)} className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Edit Postingan"><Pencil size={16} /></button>
+                  )}
+                  <button onClick={(e) => handleDeletePost(e, item.id_postingan)} className="w-9 h-9 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm" title="Hapus Postingan"><Trash2 size={16} /></button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-bold text-slate-400 italic px-2">
+                    {item.status_postingan === 'selesai' ? 'Selesai' : 'Sedang Diklaim'}
+                  </span>
+                  {item.status_postingan === 'menunggu_validasi' && (
+                    <button
+                      onClick={() => handleDetailClick(item.id_postingan)}
+                      className="px-3 py-1.5 bg-yellow-500 text-white text-xs font-bold rounded-lg shadow-sm hover:bg-yellow-600 transition flex items-center gap-1 animate-pulse"
+                    >
+                      <Clock size={12} /> Validasi Klaim
+                    </button>
+                  )}
+                </div>
+              )
+            ) : (
+              <button onClick={() => handleDetailClick(item.id_postingan)} className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-[#0a1e3f] hover:text-white transition-all duration-300 shadow-sm hover:shadow-lg group/btn">
+                <ChevronRight size={18} className="group-hover/btn:translate-x-0.5 transition-transform" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // COMPONENTS
   const NavButton = ({ icon, label, isActive, onClick }) => (
     <button
@@ -185,6 +356,7 @@ const Dashboard = () => {
           <div className="space-y-2">
             <NavButton icon={<Search size={22} />} label="Jelajah Barang" isActive={activeTab === 'jelajah'} onClick={() => setActiveTab('jelajah')} />
             <NavButton icon={<List size={22} />} label="Riwayat Saya" isActive={activeTab === 'saya'} onClick={() => setActiveTab('saya')} />
+            <NavButton icon={<Package size={22} />} label="Barang Klaim" isActive={activeTab === 'klaim'} onClick={() => setActiveTab('klaim')} />
             <NavButton icon={<User size={22} />} label="Profil Akun" onClick={() => navigate('/profile')} isActive={false} />
             <div className="my-6 border-t border-white/10 mx-2"></div>
             <NavButton icon={<MessageSquare size={22} />} label="Hubungi Admin" onClick={() => window.open('mailto:admin@ulbi.ac.id')} isActive={false} />
@@ -208,11 +380,8 @@ const Dashboard = () => {
             <PlusCircle size={28} />
           </button>
         </div>
+        <MobileNavButton icon={<Package size={24} />} label="Klaim" isActive={activeTab === 'klaim'} onClick={() => setActiveTab('klaim')} />
         <MobileNavButton icon={<User size={24} />} label="Profil" onClick={() => navigate('/profile')} isActive={false} />
-        <button onClick={handleLogout} className="flex flex-col items-center justify-center w-full py-2 text-red-400 active:scale-95 transition-transform">
-          <LogOut size={24} className="mb-0.5" />
-          <span className="text-[10px] font-medium">Keluar</span>
-        </button>
       </div>
 
       {/* MAIN CONTENT */}
@@ -265,16 +434,17 @@ const Dashboard = () => {
               </div>
               <div>
                 <h3 className="text-2xl font-bold text-slate-800">
-                  {activeTab === 'jelajah' ? 'Jelajah Barang' : 'Laporan Saya'}
+                  {activeTab === 'jelajah' ? 'Jelajah Barang' : activeTab === 'saya' ? 'Laporan Saya' : 'Barang Klaim'}
                 </h3>
                 <p className="text-slate-400 text-xs font-medium">
-                  {activeTab === 'jelajah' ? 'Daftar semua laporan aktif' : 'Pantau status laporan Anda'}
+                  {activeTab === 'jelajah' ? 'Daftar semua laporan aktif' : activeTab === 'saya' ? 'Pantau status laporan Anda' : 'Riwayat barang berhasil diklaim'}
                 </p>
               </div>
             </div>
             <div className="inline-flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
               <button onClick={() => setActiveTab('jelajah')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'jelajah' ? 'bg-[#0a1e3f] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Semua</button>
               <button onClick={() => setActiveTab('saya')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'saya' ? 'bg-[#0a1e3f] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Milik Saya</button>
+              <button onClick={() => setActiveTab('klaim')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'klaim' ? 'bg-[#0a1e3f] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>Barang Klaim</button>
             </div>
           </div>
           <div className="relative w-full md:w-80 group">
@@ -302,101 +472,7 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20">
-            {posts.map((item, index) => {
-              // --- LOGIC BARU: PENENTUAN NAMA PELAPOR ---
-              // Jika data pelapor dari API ada (tab Jelajah), pakai itu.
-              // Jika tidak ada (tab Saya), pakai data profil login (fallback).
-              const pelaporNama = item.akun_pengguna?.nama_lengkap || profile?.nama_lengkap || 'User';
-              const pelaporInisial = pelaporNama.charAt(0).toUpperCase();
-
-              return (
-                <div key={item.id_postingan} className="group bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 overflow-hidden flex flex-col h-full hover:-translate-y-1 animate-[fadeInUp_0.5s_ease-out_forwards] opacity-0" style={{ animationDelay: `${index * 0.1}s` }}>
-                  <div className="h-56 bg-slate-100 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0a1e3f]/60 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    {item.foto_barang && item.foto_barang.length > 10 ? (
-                      <img src={item.foto_barang} alt={item.nama_barang} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 bg-slate-50">
-                        <LayoutGrid size={40} className="mb-2 opacity-50" />
-                        <span className="text-xs font-medium">No Image</span>
-                      </div>
-                    )}
-                    <div className={`absolute top-4 left-4 px-3 py-1.5 rounded-xl text-[10px] font-black text-white uppercase tracking-wider shadow-lg flex items-center gap-1.5 backdrop-blur-md ${item.tipe_postingan === 'kehilangan' ? 'bg-red-500/90' : 'bg-emerald-500/90'}`}>
-                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
-                      {item.tipe_postingan}
-                    </div>
-                    {activeTab === 'saya' && (
-                      <div className={`absolute bottom-4 right-4 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white uppercase tracking-wider shadow-lg backdrop-blur-md z-20 ${item.status_postingan === 'aktif' ? 'bg-blue-600/80' : 'bg-slate-800/80'}`}>
-                        {item.status_postingan}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="p-6 flex flex-col flex-1">
-                    <div className="flex justify-between items-start mb-3">
-                      <span className="text-[10px] font-bold text-[#0a1e3f] uppercase tracking-wider bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">{item.master_kategori?.nama_kategori || 'UMUM'}</span>
-                      <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium"><Clock size={12} /> {formatDate(item.created_at || item.tgl_postingan)}</span>
-                    </div>
-                    <h4 className="text-lg font-bold text-slate-800 mb-2 line-clamp-1 group-hover:text-orange-600 transition-colors">{item.nama_barang}</h4>
-                    <div className="flex items-start gap-1.5 mb-4">
-                      <MapPin size={14} className="text-orange-500 mt-0.5 flex-shrink-0" />
-                      <span className="text-xs text-slate-500 font-medium line-clamp-1">{item.lokasi_terlapor}</span>
-                    </div>
-                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-6 flex-1">{item.deskripsi}</p>
-
-                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-[#0a1e3f] flex items-center justify-center text-[10px] font-bold text-white overflow-hidden">
-                          {item.akun_pengguna?.foto_profil ? (
-                            <img
-                              src={getStorageUrl(item.akun_pengguna.foto_profil)}
-                              alt="Pelapor"
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            pelaporInisial
-                          )}
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Pelapor</span>
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs font-bold text-slate-700 truncate max-w-[80px]">{pelaporNama.split(' ')[0]}</span>
-                            <VerificationBadge status={item.akun_pengguna?.status_akun} />
-                          </div>
-                        </div>
-                      </div>
-
-                      {activeTab === 'saya' ? (
-                        item.status_postingan === 'aktif' ? (
-                          <div className="flex gap-2">
-                            <button onClick={(e) => handleEditPost(e, item)} className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Edit Postingan"><Pencil size={16} /></button>
-                            <button onClick={(e) => handleDeletePost(e, item.id_postingan)} className="w-9 h-9 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm" title="Hapus Postingan"><Trash2 size={16} /></button>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col gap-2">
-                            <span className="text-xs font-bold text-slate-400 italic px-2">
-                              {item.status_postingan === 'selesai' ? 'Selesai' : 'Sedang Diklaim'}
-                            </span>
-                            {item.status_postingan === 'menunggu_validasi' && (
-                              <button
-                                onClick={() => handleDetailClick(item.id_postingan)}
-                                className="px-3 py-1.5 bg-yellow-500 text-white text-xs font-bold rounded-lg shadow-sm hover:bg-yellow-600 transition flex items-center gap-1 animate-pulse"
-                              >
-                                <Clock size={12} /> Validasi Klaim
-                              </button>
-                            )}
-                          </div>
-                        )
-                      ) : (
-                        <button onClick={() => handleDetailClick(item.id_postingan)} className="w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-[#0a1e3f] hover:text-white transition-all duration-300 shadow-sm hover:shadow-lg group/btn">
-                          <ChevronRight size={18} className="group-hover/btn:translate-x-0.5 transition-transform" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {posts.map((item, index) => renderCardContent(item))}
           </div>
         )}
 

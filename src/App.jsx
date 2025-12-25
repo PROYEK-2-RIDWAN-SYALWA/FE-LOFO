@@ -13,6 +13,7 @@ import LaporBarang from './pages/LaporBarang';
 import Profile from './pages/Profile';
 import ForgotPassword from './pages/ForgotPassword';
 import UpdatePassword from './pages/UpdatePassword';
+import RiwayatKlaim from './pages/RiwayatKlaim';
 
 // Admin Import
 import AdminLayout from './components/AdminLayout';
@@ -47,7 +48,7 @@ function App() {
             <PostDetail />
           </PrivateRoute>
         } />
-        
+
         <Route path="/lapor" element={
           <PrivateRoute>
             <LaporBarang />
@@ -68,23 +69,23 @@ function App() {
         }>
           {/* Redirect /admin ke /admin/dashboard */}
           <Route index element={<Navigate to="dashboard" replace />} />
-          
+
           {/* Halaman Dashboard Admin */}
           <Route path="dashboard" element={<AdminDashboard />} />
-          
+
           {/* Halaman Manajemen User */}
           <Route path="users" element={<AdminUsers />} />
-          
+
           {/* Halaman Moderasi Laporan */}
           <Route path="posts" element={<AdminPosts />} />
-          
+
           {/* Halaman Kelola Kategori */}
           <Route path="categories" element={<AdminCategories />} />
-          
+
           {/* Halaman Kelola Prodi */}
           <Route path="prodi" element={<AdminProdi />} />
         </Route>
-        
+
         {/* === FALLBACK ROUTE === */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
