@@ -407,8 +407,15 @@ const Dashboard = () => {
                   : `Selamat datang, ${getRoleLabel(profile?.role_name)}`}
               </p>
             </div>
-            <div className="md:hidden absolute top-0 right-0 p-4">
+            <div className="md:hidden absolute top-0 right-0 p-4 flex items-center gap-2">
               <NotificationBell />
+              <button
+                onClick={handleLogout}
+                className="bg-red-50 text-red-500 p-2 rounded-full shadow-sm border border-red-100 active:scale-95 transition-all"
+                title="Keluar Aplikasi"
+              >
+                <LogOut size={20} />
+              </button>
             </div>
           </div>
 

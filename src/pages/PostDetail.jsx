@@ -152,14 +152,16 @@ const PostDetail = () => {
     }
   };
 
-  const handleRejectClaim = async (claim) => {
+  const handleRejectClaim = async () => {
     // Gunakan parameter claim langsung jika ada, atau fallback variable lain jika sebelumnya pakai state
-    const targetId = claim?.id_klaim || selectedClaim?.id_klaim;
+    const targetId = selectedClaim?.id_klaim;
     if (!targetId) return;
 
-    const alasan = prompt("Masukkan alasan penolakan (min. 10 karakter):", "Bukti tidak valid");
-    if (!alasan) return;
-    if (alasan.length < 10) return alert("Alasan terlalu pendek.");
+    // AMBIL ALASAN DARI STATE MODAL (Bukan prompt browser lagi)
+    const alasan = rejectReason;
+
+    if (!alasan) return alert("Mohon isi alasan penolakan.");
+    if (alasan.length < 10) return alert("Alasan terlalu pendek (min. 10 karakter).");
 
     setProcessingClaim(true);
     try {
@@ -260,7 +262,7 @@ const PostDetail = () => {
                     {claim.file_bukti && (
                       <div className="mb-3">
                         <p className="text-xs text-slate-500 mb-1">Bukti Kepemilikan:</p>
-                        <img src={claim.file_bukti} alt="Bukti" className="w-full h-32 object-cover rounded-lg border" />
+                        <img src={getStorageUrl(claim.file_bukti)} alt="Bukti" className="w-full h-32 object-cover rounded-lg border" />
                       </div>
                     )}
 
