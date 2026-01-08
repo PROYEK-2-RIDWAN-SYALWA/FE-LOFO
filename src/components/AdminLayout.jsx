@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, FileText, LogOut, ShieldAlert, Tag, Building, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, ShieldAlert, Tag, Building, Menu, X, Activity } from 'lucide-react';
 
 const AdminLayout = () => {
   const { signOut } = useAuth();
@@ -29,6 +29,7 @@ const AdminLayout = () => {
     { icon: <LayoutDashboard size={20} />, label: 'Overview', path: '/admin/dashboard' },
     { icon: <Users size={20} />, label: 'Manajemen User', path: '/admin/users' },
     { icon: <FileText size={20} />, label: 'Moderasi Laporan', path: '/admin/posts' },
+    { icon: <Activity size={20} />, label: 'Monitoring Post', path: '/admin/monitoring' },
     { icon: <Tag size={20} />, label: 'Kategori Barang', path: '/admin/categories' },
     { icon: <Building size={20} />, label: 'Program Studi', path: '/admin/prodi' },
   ];
@@ -53,9 +54,9 @@ const AdminLayout = () => {
           w-full px-4 gap-3 justify-start
 
           /* Desktop: Responsif */
-          md:w-auto
-          ${isSidebarHovered 
-            ? 'md:px-4 md:justify-start md:gap-3' 
+          md:w-full
+          ${isSidebarHovered
+            ? 'md:px-4 md:justify-start md:gap-3'
             : 'md:px-0 md:justify-center md:gap-0'
           }
         `}
@@ -69,8 +70,8 @@ const AdminLayout = () => {
 
           /* Desktop Logic */
           md:absolute md:left-12
-          ${isSidebarHovered 
-            ? 'md:static md:opacity-100 md:w-auto md:translate-x-0' 
+          ${isSidebarHovered
+            ? 'md:static md:opacity-100 md:w-auto md:translate-x-0'
             : 'md:opacity-0 md:w-0 md:-translate-x-4 pointer-events-none'
           }
         `}>
@@ -140,25 +141,25 @@ const AdminLayout = () => {
             /* Desktop: Conditional Justify & Gap */
             ${isSidebarHovered ? 'md:justify-start md:gap-3 md:pl-2' : 'md:justify-center md:gap-0'}
           `}>
-            
+
             {/* Logo Icon & Text Wrapper */}
             <div className="flex items-center gap-3 overflow-hidden">
-                {/* Icon (Fixed Size) */}
-                <div className="bg-orange-600 p-2 rounded-lg flex-shrink-0 shadow-lg shadow-orange-500/20 z-10 relative">
-                    <ShieldAlert size={24} className="text-white" />
-                </div>
+              {/* Icon (Fixed Size) */}
+              <div className="bg-orange-600 p-2 rounded-lg flex-shrink-0 shadow-lg shadow-orange-500/20 z-10 relative">
+                <ShieldAlert size={24} className="text-white" />
+              </div>
 
-                {/* Text (Animasi Width & Opacity Murni - Tanpa Absolute) */}
-                <div className={`
+              {/* Text (Animasi Width & Opacity Murni - Tanpa Absolute) */}
+              <div className={`
                     flex flex-col justify-center whitespace-nowrap transition-all duration-300 ease-in-out origin-left
-                    ${isSidebarHovered 
-                        ? 'w-32 opacity-100 scale-100' // Desktop Expanded
-                        : 'md:w-0 md:opacity-0 md:scale-95 w-32 opacity-100' // Desktop Collapsed (Hidden) vs Mobile (Visible)
-                    }
+                    ${isSidebarHovered
+                  ? 'w-32 opacity-100 scale-100' // Desktop Expanded
+                  : 'md:w-0 md:opacity-0 md:scale-95 w-32 opacity-100' // Desktop Collapsed (Hidden) vs Mobile (Visible)
+                }
                 `}>
-                    <h1 className="text-lg font-bold leading-none tracking-wide text-white">ADMIN</h1>
-                    <p className="text-[9px] text-slate-400 font-bold tracking-[0.2em] mt-1">PANEL</p>
-                </div>
+                <h1 className="text-lg font-bold leading-none tracking-wide text-white">ADMIN</h1>
+                <p className="text-[9px] text-slate-400 font-bold tracking-[0.2em] mt-1">PANEL</p>
+              </div>
             </div>
 
             {/* Tombol Close (Hanya Mobile) */}

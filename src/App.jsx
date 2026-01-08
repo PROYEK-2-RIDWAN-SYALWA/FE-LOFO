@@ -22,6 +22,7 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminPosts from './pages/admin/AdminPosts';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminProdi from './pages/admin/AdminProdi';
+import AdminMonitoring from './pages/admin/AdminMonitoring';
 
 function App() {
   return (
@@ -84,6 +85,9 @@ function App() {
 
           {/* Halaman Kelola Prodi */}
           <Route path="prodi" element={<AdminProdi />} />
+
+          {/* Halaman Monitoring (BARU) */}
+          <Route path="monitoring" element={<AdminMonitoring />} />
         </Route>
 
         {/* === FALLBACK ROUTE === */}

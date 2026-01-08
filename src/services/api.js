@@ -319,6 +319,12 @@ export const rejectPost = async (idPostingan, alasan) => {
   });
 };
 
+// [BARU] Monitoring Postingan (Read Only)
+export const fetchAdminMonitoringPosts = async (params = {}) => {
+  const queryParams = new URLSearchParams(params);
+  return fetchWithAuth(`/api/admin/monitoring/posts?${queryParams.toString()}`);
+};
+
 // ==========================================
 // 9. CLAIM MANAGEMENT (BARU)
 // ==========================================
