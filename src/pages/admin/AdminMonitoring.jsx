@@ -443,14 +443,31 @@ const AdminMonitoring = () => {
                                                             <Clock size={12} /> {new Date(claim.tgl_klaim).toLocaleString()}
                                                         </p>
 
-                                                        {/* Bukti Klaim (Jika Ada di data, ini asumsi field file_bukti bisa diambil jika join lengkap, 
-                                                        di controller monitoring tadi kita select * dari klaim tapi file_bukti mungkin perlu dicek 
-                                                        apakah terambil atau tidak. Kalau controller pakai klaim:data_klaim(*), maka file_bukti ikut) 
-                                                     */}
-                                                        {/* Note: Controller monitoring kita select id_klaim, status, tgl, pengklaim. 
-                                                        Kalau mau file_bukti harus ditambah di controller. 
-                                                        Untuk sekarang kita tampilkan info dasar saja dulu. 
-                                                    */}
+                                                        {/* Bukti Klaim (Disetujui atau Ditolak) */}
+                                                        {(claim.status_klaim === 'disetujui' || claim.status_klaim === 'ditolak') && claim.file_bukti && (
+                                                            <div className="mt-3">
+                                                                <p className="text-xs font-semibold text-slate-700 mb-2">Bukti Kepemilikan:</p>
+                                                                <div className="w-full max-w-xs h-48 bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+                                                                    <img
+                                                                        src={getStorageUrl(claim.file_bukti)}
+                                                                        alt="Bukti Klaim"
+                                                                        className="w-full h-full object-contain"
+                                                                        onError={(e) => e.target.src = 'https://placehold.co/400?text=No+Image'}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Catatan Validasi */}
+                                                        {claim.catatan_validasi && (
+                                                            <div className={`mt-3 p-3 rounded-lg text-xs leading-relaxed border ${claim.status_klaim === 'disetujui'
+                                                                    ? 'bg-green-50 border-green-100 text-green-800'
+                                                                    : 'bg-red-50 border-red-100 text-red-800'
+                                                                }`}>
+                                                                <p className="font-bold mb-1">Catatan Validasi:</p>
+                                                                {claim.catatan_validasi}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
