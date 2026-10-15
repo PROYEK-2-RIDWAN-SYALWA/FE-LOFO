@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, FileText, LogOut, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, ShieldAlert, Tag, Building } from 'lucide-react';
 
 const AdminLayout = () => {
   const { signOut } = useAuth(); 
@@ -28,6 +28,8 @@ const AdminLayout = () => {
     { icon: <LayoutDashboard size={20} />, label: 'Overview', path: '/admin/dashboard' },
     { icon: <Users size={20} />, label: 'Manajemen User', path: '/admin/users' },
     { icon: <FileText size={20} />, label: 'Moderasi Laporan', path: '/admin/posts' },
+    { icon: <Tag size={20} />, label: 'Kategori Barang', path: '/admin/categories' },
+    { icon: <Building size={20} />, label: 'Program Studi', path: '/admin/prodi' },
   ];
 
   // Komponen Helper: Tombol Navigasi
